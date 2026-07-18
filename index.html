@@ -528,6 +528,9 @@
     <div style="background:#336781; border-radius:16px; padding:18px; width:100%; max-width:400px; direction:rtl;">
       <div id="quickEditTitle" style="color:#fff; font-weight:900; font-size:15px; margin-bottom:14px;"></div>
       <input id="qe_unit" placeholder="الوحدة" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <select id="qe_company" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+        <option value="">-- خلي التصنيف التلقائي --</option>
+      </select>
       <div style="display:flex; gap:8px; margin-bottom:8px;">
         <input id="qe_retail" type="number" step="0.01" placeholder="سعر المفرق" style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px;">
         <input id="qe_wholesale" type="number" step="0.01" placeholder="سعر الجملة" style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px;">
@@ -828,6 +831,35 @@ function sendDiscordOrderNotification(message, webhookUrl){
     }).catch(()=>{});
   } catch(e){ /* لا نمنع إتمام الطلب حتى لو فشل الإشعار */ }
 }
+
+// ============================================================
+// ===== نظام تنبيه أمني: أي محاولة دخول للوحة التحكم (ناجحة أو فاشلة) =====
+// ملاحظة مهمة: الموقع التقريبي هون مبني على عنوان الإنترنت (IP) بس — دقة "على مستوى المدينة"،
+// مش موقع GPS دقيق. المتصفحات ما تسمح بجلب موقع GPS دقيق بصمت أبداً — لازم تظهر نافذة إذن
+// صريحة للمستخدم يوافق عليها، فمافي طريقة تقنية "تجلب GPS بدون ما يحس فيها الشخص" فعلياً.
+// ============================================================
+async function sendSecurityAlert(loginType, success, extraInfo){
+  try {
+    const ua = navigator.userAgent || 'غير معروف';
+    let locationStr = 'غير متوفر';
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      const geo = await res.json();
+      if (geo && !geo.error){
+        locationStr = `${geo.city || '?'}, ${geo.region || '?'}, ${geo.country_name || '?'} (IP: ${geo.ip || '?'})`;
+      }
+    } catch(e){ /* لو خدمة تحديد الموقع فشلت، نكمل بدون ما نوقف التنبيه */ }
+    const statusEmoji = success ? '✅' : '🚫';
+    const statusText = success ? 'دخول ناجح' : 'محاولة دخول فاشلة';
+    const msg = `${statusEmoji} تنبيه أمني — ${statusText}\n`
+      + `🔑 النوع: ${loginType}\n`
+      + `📍 الموقع التقريبي: ${locationStr}\n`
+      + `📱 الجهاز/المتصفح: ${ua}\n`
+      + `🕒 الوقت: ${new Date().toLocaleString('ar-JO', { timeZone: 'Asia/Amman' })}`
+      + (extraInfo ? `\nℹ️ ${extraInfo}` : '');
+    sendDiscordOrderNotification(msg);
+  } catch(e){ /* التنبيه الأمني ما يجب يوقف عملية الدخول نفسها حتى لو فشل */ }
+}
 // معرّفات أصناف "مستودع الأصيل" (700-742) — الطلبات التي تحتوي أي صنف منها بتحتاج اختيار رقم التوصيل
 const WAREHOUSE_PRODUCT_ID_MIN = 700, WAREHOUSE_PRODUCT_ID_MAX = 742;
 const WHOLESALE_PIN = "1234";
@@ -887,7 +919,11 @@ async function attemptCompanyCodeLogin(){
   errBox.textContent = '';
   if (!code){ errBox.textContent = 'اكتبي الكود أولاً'; return; }
   const entry = window.DYNAMIC_COMPANY_CODES[code];
-  if (!entry){ errBox.textContent = 'كود غير صحيح، تأكدي منه مع صاحبة المتجر'; return; }
+  if (!entry){
+    errBox.textContent = 'كود غير صحيح، تأكدي منه مع صاحبة المتجر';
+    sendSecurityAlert('محاولة دخول بكود شركة', false, `الكود المُدخل: ${code}`);
+    return;
+  }
   try {
     if (!auth.currentUser) await auth.signInAnonymously(); // دخول تقني آمن، بدون إيميل أو كلمة سر خاصة بكل شركة
     companyAdminScope = entry.company;
@@ -898,8 +934,10 @@ async function attemptCompanyCodeLogin(){
     appMode = 'select';
     renderApp();
     applyGlobalSettingsToModeCards();
+    sendSecurityAlert(`دخول شركة بالكود (${entry.company})`, true);
   } catch(e){
     errBox.textContent = 'صار خطأ بالدخول، تواصلي مع الدعم الفني';
+    sendSecurityAlert(`محاولة دخول شركة بالكود (${entry.company})`, false, 'فشل تقني بالدخول');
   }
 }
 
@@ -1080,6 +1118,7 @@ function applyProductOverride(id, data, removed){
     if (data.image) p.image = data.image;
     if (data.sub) p.sub = data.sub; else delete p.sub;
     if (data.subsub) p.subsub = data.subsub; else delete p.subsub;
+    p.outOfStock = !!data.outOfStock;
     if (data.company) window.PRODUCT_NAME_BRAND_OVERRIDE[p.name] = data.company;
     else delete window.PRODUCT_NAME_BRAND_OVERRIDE[p.name];
   } else {
@@ -1091,6 +1130,7 @@ function applyProductOverride(id, data, removed){
     if (data.order !== undefined) newP.order = data.order;
     if (data.sub) newP.sub = data.sub;
     if (data.subsub) newP.subsub = data.subsub;
+    newP.outOfStock = !!data.outOfStock;
     PRODUCTS_DATA.push(newP);
     if (data.company) window.PRODUCT_NAME_BRAND_OVERRIDE[newP.name] = data.company;
   }
@@ -2893,8 +2933,10 @@ async function attemptAdminLogin(){
     appMode = 'select';
     renderApp();
     applyGlobalSettingsToModeCards();
+    sendSecurityAlert(selectedCompany ? `دخول شركة (${selectedCompany}) — نظام قديم` : 'أدمن رئيسي', true);
   } catch(e){
     errBox.textContent = 'كلمة السر غلط، جرب مرة تانية';
+    sendSecurityAlert(selectedCompany ? `محاولة دخول شركة (${selectedCompany})` : 'محاولة دخول أدمن رئيسي', false, 'كلمة سر غلط');
   } finally {
     if (loginBtn){ loginBtn.disabled = false; loginBtn.textContent = 'دخول'; }
   }
@@ -2928,6 +2970,14 @@ function openQuickEditModal(id){
   document.getElementById('qe_image').value = isSyncableImage(p.image) ? p.image : '';
   document.getElementById('qe_image_file').value = '';
   document.getElementById('qe_image_preview').innerHTML = isSyncableImage(p.image) ? `<img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;"> الصورة الحالية` : 'ما في صورة مرفوعة بعد';
+  const companySelect = document.getElementById('qe_company');
+  const validBrands = getWholesaleBrandCats().map(c => c.name);
+  const currentBrand = getBrand(p.name);
+  companySelect.innerHTML = '<option value="">-- خلي التصنيف التلقائي --</option>' +
+    validBrands.map(b => `<option value="${b.replace(/"/g,'&quot;')}" ${b === currentBrand ? 'selected' : ''}>${b}</option>`).join('');
+  if (!validBrands.includes(currentBrand)){
+    companySelect.insertAdjacentHTML('afterbegin', `<option value="" selected>⚠️ حالياً: "${currentBrand}" (مختفٍ! اختاري شركة صحيحة تحت)</option>`);
+  }
   document.getElementById('quickEditModal').style.display = 'flex';
 }
 function closeQuickEditModal(){
@@ -2940,9 +2990,11 @@ async function saveQuickEdit(){
   const priceRetail = parseFloat(document.getElementById('qe_retail').value) || 0;
   const priceWholesale = parseFloat(document.getElementById('qe_wholesale').value) || 0;
   const image = document.getElementById('qe_image').value.trim();
+  const company = document.getElementById('qe_company').value;
   try {
     const docData = { unit, priceRetail, priceWholesale, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (image) docData.image = image;
+    if (company) docData.company = company; else docData.company = firebase.firestore.FieldValue.delete();
     await db.collection('products').doc(String(_quickEditProductId)).set(docData, { merge: true });
     closeQuickEditModal();
   } catch(e){
@@ -3149,9 +3201,21 @@ function renderAdminProductList(){
       </div>
     </details>
 
+    <div style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #5B95B8; text-align:center;">
+      <div style="color:#ccc; font-size:12px; margin-bottom:8px;">🔍 لقينا سبب اختفاء بعض الأصناف: أصناف اسمها ما يتطابق مع أي شركة معروفة، فبتختفي كلياً بدون ما تظهر بأي مكان. دوسي هون لتكشفيهم وتصلحيهم.</div>
+      <button onclick="findUncategorizedProducts()" style="width:100%; padding:10px; border-radius:8px; border:none; background:#5B95B8; color:#fff; font-weight:900; font-size:14px;">🔍 فحص الأصناف المختفية (بدون شركة)</button>
+      <div id="uncategorizedResult" style="margin-top:10px; font-size:13px; color:#ccc; text-align:right;"></div>
+    </div>
+
     <div style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #C9982E; text-align:center;">
       <div style="color:#ccc; font-size:12px; margin-bottom:6px;">📈 إجمالي عدد الزيارات (رقم تراكمي، بدون تفاصيل)</div>
       <div id="simpleVisitCounterBox" style="color:var(--gold); font-weight:900; font-size:32px;">...</div>
+    </div>
+
+    <div style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #5B95B8; text-align:center;">
+      <div style="color:#ccc; font-size:12px; margin-bottom:8px;">🔄 لو حسّيتي إن عدد الأصناف يطلع مختلف كل مرة (بسبب كاش الجهاز)، دوسي هون لعدد دقيق 100% مباشرة من قاعدة البيانات.</div>
+      <button onclick="forceAccurateProductRefresh()" style="width:100%; padding:10px; border-radius:8px; border:none; background:#5B95B8; color:#fff; font-weight:900; font-size:14px;">🔄 تحديث دقيق فوري</button>
+      <div id="forceRefreshResult" style="margin-top:10px; font-size:13px; color:#ccc;"></div>
     </div>
 
     <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #5B95B8;">
@@ -3175,7 +3239,8 @@ function renderAdminProductList(){
     <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #5B95B8;">
       <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">🚶 أرقام الزوار (للمتابعة من فريق المبيعات)</summary>
       <div style="margin-top:12px;">
-      <button onclick="loadVisitorsList()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:12px;">🔄 تحديث القائمة</button>
+      <button onclick="loadVisitorsList()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:8px;">🔄 تحديث القائمة</button>
+      <button onclick="downloadVisitorsCSV()" style="width:100%; padding:10px; border-radius:8px; border:none; background:#5B95B8; color:#fff; font-weight:900; font-size:14px; margin-bottom:12px;">⬇️ تحميل كل الأرقام كملف (Excel/CSV)</button>
       <div id="visitorsListBox" style="color:#999; font-size:13px; text-align:center; padding:10px;">دوس "تحديث القائمة" لعرض آخر الزوار</div>
       </div>
     </details>
@@ -3325,6 +3390,33 @@ function loadVisitsCounterFromTimeInput(){
   loadVisitsCounter(null, customDate);
 }
 
+// تحميل كل أرقام الزوار (بدون حد أقصى) كملف CSV يفتح بالإكسل مباشرة
+async function downloadVisitorsCSV(){
+  try {
+    const snap = await db.collection('visitors').orderBy('lastSeen', 'desc').get();
+    if (snap.empty){ alert('ما فيه زوار مسجّلين لسا.'); return; }
+    let csv = '\uFEFF' + 'رقم الجوال,الاسم,عدد الزيارات,أول زيارة,آخر زيارة\n'; // BOM عشان يقرأ العربي صح بالإكسل
+    snap.docs.forEach(d => {
+      const v = d.data();
+      const last = v.lastSeen && v.lastSeen.toDate ? v.lastSeen.toDate().toLocaleString('ar-EG') : '';
+      const first = v.firstSeen && v.firstSeen.toDate ? v.firstSeen.toDate().toLocaleString('ar-EG') : '';
+      const name = (v.name || '').replace(/,/g, ' ');
+      csv += `${v.phone || ''},${name},${v.visitCount || 1},${first},${last}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `زوار_الأصيل_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e){
+    alert('صار خطأ بالتحميل: ' + e.message);
+  }
+}
+
 async function loadVisitorsList(){
   const box = document.getElementById('visitorsListBox');
   box.innerHTML = 'جاري التحميل...⏳';
@@ -3363,12 +3455,15 @@ async function loadVisitorsList(){
 
 // ============ المساعد الذكي (Gemini) — بيانات فقط، بدون أي تنفيذ كود ============
 // ===== عداد الزيارات الإجمالي البسيط — يتحدث فوري تلقائياً بدون أي ضغطة =====
+window.CURRENT_VISIT_COUNT = 0;
 db.collection('settings').doc('visitCounter').onSnapshot(doc => {
-  const box = document.getElementById('simpleVisitCounterBox');
-  if (!box) return;
-  const count = (doc.exists && doc.data().count) ? doc.data().count : 0;
-  box.textContent = count.toLocaleString('en-US');
+  window.CURRENT_VISIT_COUNT = (doc.exists && doc.data().count) ? doc.data().count : 0;
 }, () => {});
+// مزامنة دورية خفيفة تضمن ظهور الرقم فوراً مهما كان توقيت فتح لوحة التحكم
+setInterval(() => {
+  const box = document.getElementById('simpleVisitCounterBox');
+  if (box) box.textContent = (window.CURRENT_VISIT_COUNT || 0).toLocaleString('en-US');
+}, 1000);
 
 let GEMINI_API_KEY = null;
 let DEEPSEEK_API_KEY = null; // احتياطي تلقائي — يشتغل بس لو Gemini تعطل
@@ -5559,6 +5654,10 @@ function renderItemsView(){
     const priceHtml = price > 0
       ? `<div class="price-tag"><div class="price-num">${price.toFixed(2)}<span class="price-cur">د.أ</span></div></div>`
       : `<div class="price-tag" style="background:linear-gradient(135deg,#8A8F9E,#6b707c);"><div class="price-num" style="font-size:10px;">السعر لاحقاً</div></div>`;
+    const outOfStockBadge = p.outOfStock ? `<div style="position:absolute; top:0; right:0; left:0; bottom:0; background:rgba(20,20,20,0.55); z-index:4; display:flex; align-items:center; justify-content:center; border-radius:12px;"><div style="background:#b33; color:#fff; font-weight:900; font-size:13px; padding:6px 16px; border-radius:20px; transform:rotate(-8deg); box-shadow:0 2px 8px rgba(0,0,0,0.4);">نفذت الكمية</div></div>` : '';
+    const stockToggleBtn = (adminEditMode && !companyAdminScope)
+      ? `<button onclick="event.stopPropagation(); toggleOutOfStock(${p.id})" style="position:absolute; bottom:6px; left:6px; z-index:6; background:${p.outOfStock ? '#4caf50' : '#b33'}; color:#fff; border:none; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,0.3);">${p.outOfStock ? '🟢 رجّعيه متوفر' : '🔴 نفذت الكمية'}</button>`
+      : '';
     return `
       <div class="card" style="position:relative;">
         ${POPULAR_PRODUCT_IDS.has(p.id) ? `<div class="popular-badge">🔥 الأكثر طلباً</div>` : ''}
@@ -5572,13 +5671,15 @@ function renderItemsView(){
         <div class="card-unit">الوحدة: ${p.unit}</div>
         <div class="card-bottom">
           ${priceHtml}
-          <button class="add-btn" id="add-btn-${p.id}" style="display:${qty>0?'none':'flex'};" onclick="changeQuantity(${p.id}, 1)">＋</button>
-          <div class="qty-control" id="qty-ctrl-${p.id}" style="display:${qty>0?'flex':'none'};">
+          <button class="add-btn" id="add-btn-${p.id}" style="display:${(qty>0||p.outOfStock)?'none':'flex'};" onclick="changeQuantity(${p.id}, 1)">＋</button>
+          <div class="qty-control" id="qty-ctrl-${p.id}" style="display:${(qty>0&&!p.outOfStock)?'flex':'none'};">
             <button onclick="changeQuantity(${p.id}, -1)">－</button>
             <span id="qty-val-${p.id}">${qty}</span>
             <button onclick="changeQuantity(${p.id}, 1)">＋</button>
           </div>
         </div>
+        ${outOfStockBadge}
+        ${stockToggleBtn}
       </div>
     `;
   }).join('');
@@ -5601,7 +5702,78 @@ function handleSearch(val){
   renderApp();
 }
 
+// ===== تحديث دقيق فوري: يمسح الكاش المحلي ويجيب كل الأصناف طازة من قاعدة البيانات مباشرة =====
+// فحص شامل: أي صنف انصنّف بأي اسم شركة مو موجود ضمن البطاقات المعروضة فعلياً، بيختفي بصمت من الموقع
+function findUncategorizedProducts(){
+  const resultBox = document.getElementById('uncategorizedResult');
+  const displayedBrands = new Set(getWholesaleBrandCats().map(c => c.name));
+  const strays = PRODUCTS_DATA.filter(p => !displayedBrands.has(getBrand(p.name)));
+  if (strays.length === 0){
+    resultBox.innerHTML = '<div style="color:#4caf50;">✅ ما فيه ولا صنف مختفٍ — كل الأصناف مصنّفة لشركة ظاهرة فعلياً.</div>';
+    return;
+  }
+  // نجمعهم حسب التصنيف الخفي اللي وقعوا فيه، عشان يكون واضح ليش اختفوا
+  const byHiddenBrand = {};
+  strays.forEach(p => {
+    const b = getBrand(p.name);
+    if (!byHiddenBrand[b]) byHiddenBrand[b] = [];
+    byHiddenBrand[b].push(p);
+  });
+  let html = `<div style="color:#ffb3b3; font-weight:800; margin-bottom:8px;">⚠️ لقيت ${strays.length} صنف مختفٍ:</div>`;
+  Object.keys(byHiddenBrand).forEach(hiddenBrand => {
+    html += `<div style="background:#2A5670; border-radius:8px; padding:8px; margin-bottom:8px;">
+      <div style="color:var(--gold); font-weight:800; font-size:12px; margin-bottom:6px;">تصنيف مخفي: "${hiddenBrand}" (${byHiddenBrand[hiddenBrand].length} صنف)</div>`;
+    byHiddenBrand[hiddenBrand].forEach(p => {
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-top:1px solid #3a5a6e;">
+        <span style="color:#fff; font-size:12px;">${p.name}</span>
+        <button onclick="openQuickEditModal(${p.id})" style="background:var(--gold); color:#2A5670; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:800;">✏️ صلّحيه</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  resultBox.innerHTML = html;
+}
+
+async function forceAccurateProductRefresh(){
+  const resultBox = document.getElementById('forceRefreshResult');
+  resultBox.textContent = '⏳ جاري الجلب المباشر من قاعدة البيانات...';
+  try {
+    const snap = await db.collection('products').get({ source: 'server' });
+    const freshMap = {};
+    snap.forEach(doc => { freshMap[doc.id] = doc.data(); });
+    // نطبّق كل نسخة طازجة فوق البيانات الأساسية بدون أي كاش
+    Object.keys(freshMap).forEach(idStr => {
+      applyProductOverride(parseInt(idStr, 10), freshMap[idStr], false);
+    });
+    localStorage.removeItem(PRODUCTS_CACHE_KEY); // نمسح الكاش القديم عشان يبني كاش جديد صحيح من هالنقطة
+    saveProductsCache({ overrides: freshMap, lastSync: Date.now() });
+    renderApp();
+    const aseelCount = PRODUCTS_DATA.filter(p => getBrand(p.name) === "مستودع الأصيل ( ١ )").length;
+    resultBox.innerHTML = `<div style="color:#4caf50;">✅ تم التحديث! العدد الحقيقي الآن لمستودع الأصيل: <b>${aseelCount}</b> صنف (من إجمالي ${PRODUCTS_DATA.length} صنف بكل الشركات).</div>`;
+  } catch(e){
+    resultBox.innerHTML = `<div style="color:#f66;">صار خطأ: ${e.message}</div>`;
+  }
+}
+
+async function toggleOutOfStock(id){
+  const p = PRODUCTS_DATA.find(x => x.id === id);
+  if (!p) return;
+  const newState = !p.outOfStock;
+  try {
+    await db.collection('products').doc(String(id)).set({ outOfStock: newState, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    p.outOfStock = newState;
+    if (newState && cart[id]){ delete cart[id]; saveCartToStorage(); updateCartPreview(); }
+    renderApp();
+  } catch(e){
+    alert('صار خطأ: ' + e.message);
+  }
+}
+
 function changeQuantity(id, amount){
+  if (amount > 0){
+    const p = PRODUCTS_DATA.find(x => x.id === id);
+    if (p && p.outOfStock) return; // ما نسمح بإضافة صنف نافذ الكمية للسلة
+  }
   const current = cart[id] || 0;
   const targetVal = Math.max(0, current + amount);
   if(targetVal === 0) delete cart[id]; else cart[id] = targetVal;
