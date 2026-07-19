@@ -223,6 +223,7 @@
     width:54px; height:54px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; border:1px solid rgba(201,162,39,0.15); overflow:hidden;
   }
   .cat-box-name{ font-size:12.5px; font-weight:800; color:var(--ink); line-height:1.35; min-height:34px; display:flex; align-items:center; justify-content:center;}
+  .verified-badge{ display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; min-width:14px; border-radius:50%; background:#1DA1F2; color:#fff; font-size:9px; margin-inline-start:3px; line-height:1; }
 
   /* ITEMS SECTION TITLE */
   .section-title{
@@ -1752,11 +1753,13 @@ function getWholesaleBrandCats(){
   const dynamicLogos = {};
   const dynamicOrders = {};
   const dynamicNames = [];
+  const dynamicVerified = {};
   Object.values(window.DYNAMIC_COMPANIES || {}).forEach(c => {
     if (!c.name) return;
     dynamicNames.push(c.name);
     if (c.logo) dynamicLogos[c.name] = c.logo;
     if (c.order !== undefined) dynamicOrders[c.name] = c.order;
+    if (c.verified) dynamicVerified[c.name] = true;
   });
   const PINNED_LOGOS = Object.assign(
     { "مستودع الأصيل ( ١ )": ASEEL_OFFICIAL_LOGO, "الشركة الوطنية للتجارة والتوزيع (NTDCO)": NTDCO_LOGO, "شركة صناع السعادة لتجارة السكاكر والمواد الغذائية": HAPPINESS_MAKERS_LOGO, "شركة ترانسميد الأردن": TRANSMED_LOGO, "شركة محلات خلف": KHALAF_LOGO, "بيور كلين": PURECLEAN_LOGO, "التبغ والسجائر والمعسل": null, "نثريات شومان": null, "شركة شمس التمام لصناعة وتجارة المواد الغذائية": SHAMS_ALTAMAM_LOGO },
@@ -1764,7 +1767,7 @@ function getWholesaleBrandCats(){
   );
   const PINNED_BRANDS = Array.from(new Set([...Object.keys(PINNED_LOGOS), ...dynamicNames]));
   const PINNED_EMOJIS = { "التبغ والسجائر والمعسل": "🚬", "نثريات شومان": "🍬" };
-  const pinned = PINNED_BRANDS.map((b, idx) => ({ key: "brand::" + b, name: COMPANY_DISPLAY_NAMES[b] || b, emoji: PINNED_EMOJIS[b] || "🏷️", image: PINNED_LOGOS[b] || sampleImg[b] || null, count: counts[b] || 0, _order: dynamicOrders[b] !== undefined ? dynamicOrders[b] : idx }));
+  const pinned = PINNED_BRANDS.map((b, idx) => ({ key: "brand::" + b, name: COMPANY_DISPLAY_NAMES[b] || b, emoji: PINNED_EMOJIS[b] || "🏷️", image: PINNED_LOGOS[b] || sampleImg[b] || null, count: counts[b] || 0, verified: !!dynamicVerified[b], _order: dynamicOrders[b] !== undefined ? dynamicOrders[b] : idx }));
   pinned.sort((a, b) => a._order - b._order);
   return pinned;
 }
@@ -3126,10 +3129,14 @@ function renderAdminProductList(){
     <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px;">
       <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">✏️ تعديل شركة موجودة (اسم / شعار)</summary>
       <div style="margin-top:12px;">
-      <select id="adm_edit_co_select" onchange="document.getElementById('adm_edit_co_nameAr').value=this.value;" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <select id="adm_edit_co_select" onchange="document.getElementById('adm_edit_co_nameAr').value=this.value; document.getElementById('adm_edit_co_verified').checked = !!(window.DYNAMIC_COMPANIES[this.value] && window.DYNAMIC_COMPANIES[this.value].verified);" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
         <option value="">-- اختر الشركة --</option>
         ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
       </select>
+      <label style="display:flex; align-items:center; gap:8px; color:#fff; font-size:13px; margin-bottom:10px; cursor:pointer; background:#2A5670; padding:9px; border-radius:8px;">
+        <input type="checkbox" id="adm_edit_co_verified" style="width:18px; height:18px;">
+        🔵✔️ شركة موثقة (تظهر عندها علامة صح زرقاء بجانب اسمها بالتطبيق)
+      </label>
       <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">✏️ الاسم الصحيح بالعربي (اختياري — اكتبيه بس لو الاسم الحالي غلط أو ناقص وبدك تصلحيه؛ بينتقل معه تلقائياً كل صنف وكل قسم فرعي مرتبط بهالشركة)</label>
       <input id="adm_edit_co_nameAr" placeholder="اكتبي الاسم العربي الصحيح هون" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">✏️ الاسم بالإنجليزي (اختياري، اتركيه فاضي لو ما بدك تغييره)</label>
@@ -4822,26 +4829,25 @@ async function saveEditedCompanyLogo(){
   const nameAr = document.getElementById('adm_edit_co_nameAr').value.trim();
   const nameEn = document.getElementById('adm_edit_co_nameEn').value.trim();
   const logo = document.getElementById('adm_edit_co_logo').value.trim();
+  const verified = document.getElementById('adm_edit_co_verified').checked;
   if (!oldName){ alert('لازم تختاري الشركة'); return; }
   const newName = nameAr || oldName;
-  if (!logo && !nameEn && newName === oldName){ alert('لازم تعدلي إما الاسم العربي أو الإنجليزي أو الشعار'); return; }
   try {
     if (newName !== oldName){
       const affectedCount = PRODUCTS_DATA.filter(p => getBrand(p.name) === oldName).length;
       if (!confirm(`رح يتغيّر اسم الشركة من "${oldName}" لـ "${newName}"، وينتقل معه ${affectedCount} صنف وكل أقسامها الفرعية تلقائياً. متأكدة بدك تكملي؟`)) return;
       await renameCompanyEverywhere(oldName, newName);
     }
-    const extraData = {};
+    const extraData = { verified };
     if (logo) extraData.logo = logo;
     if (nameEn) extraData.nameEn = nameEn;
-    if (Object.keys(extraData).length){
-      await db.collection('companies').doc(newName).set(extraData, { merge: true });
-    }
+    await db.collection('companies').doc(newName).set(extraData, { merge: true });
     alert('تم الحفظ بنجاح ✅');
     document.getElementById('adm_edit_co_logo').value = '';
     document.getElementById('adm_edit_co_logo_preview').innerHTML = '';
     document.getElementById('adm_edit_co_nameEn').value = '';
     document.getElementById('adm_edit_co_nameAr').value = '';
+    document.getElementById('adm_edit_co_verified').checked = false;
     document.getElementById('adm_edit_co_select').value = '';
   } catch(e){
     alert('صار خطأ بالحفظ: ' + e.message);
@@ -5284,13 +5290,17 @@ function renderCategoriesView(){
              <button onclick="event.stopPropagation(); moveCompanyOrder('${brandRawName.replace(/'/g,"\\'")}', 1)" style="background:#333; color:#fff; border:none; border-radius:6px; width:24px; height:22px; font-size:12px;">↓</button>
            </div>`
         : '';
+      const linkBtnHtml = (adminEditMode && !companyAdminScope)
+        ? `<button onclick="event.stopPropagation(); copyCompanyDeepLink('${info.key.replace(/'/g,"\\'")}')" style="margin-top:6px; width:100%; background:#1DA1F2; color:#fff; border:none; border-radius:8px; padding:5px 6px; font-size:10px; font-weight:800;">🔗 نسخ رابط الشركة</button>`
+        : '';
       return `
       <div class="cat-box${isLocked ? ' locked' : ''}" style="position:relative;" onclick="navigateToCategory('${info.key}')">
         ${toggleBtnHtml}
         ${orderBtnsHtml}
         <div class="cat-box-icon">${info.image ? `<img src="${info.image}" style="width:100%;height:100%;object-fit:cover;">` : info.emoji}</div>
-        <div class="cat-box-name">${info.name}</div>
+        <div class="cat-box-name">${info.name}${info.verified ? `<span class="verified-badge" title="شركة موثقة">✔</span>` : ''}</div>
         ${isLocked ? `<div class="locked-badge">🔒 متوقف حالياً</div>` : `<div class="section-count" style="margin-top:4px;">${info.count} صنف</div>`}
+        ${linkBtnHtml}
       </div>
     `;
     }).join('');
@@ -6831,6 +6841,35 @@ ${ctx.productLines}
 // فحص دوري بسيط لضبط ظهور البوت مع تغيّر appMode (لأنه متغيّر عادي مش كائن قابل للمراقبة مباشرة)
 setInterval(updateCustBotVisibility, 1200);
 updateCustBotVisibility();
+
+// دعم الروابط المباشرة لقسم شركة معينة: أي رابط شكله .../#brand::اسم_الشركة بيفتح مباشرة على قسمها
+// (يُستخدم مثلاً بخانة "رابط عند الضغط" بإدارة الشرائح الإعلانية، عشان الإعلان يوجّه مباشرة لصفحة الشركة)
+function handleInitialDeepLink(){
+  const raw = location.hash ? location.hash.slice(1) : '';
+  if (!raw) return;
+  let key;
+  try { key = decodeURIComponent(raw); } catch(e){ key = raw; }
+  if (!key.startsWith('brand::')) return;
+  const brandName = key.slice(7).split('::')[0];
+  const validKeys = getWholesaleBrandCats().map(c => c.key);
+  if (!validKeys.includes(key)) return; // رابط غير معروف، منتجاهله بهدوء ونخلي التطبيق يفتح عادي
+  if (!isSectionOpen(brandName)) return; // القسم مقفول حالياً، منتجاهل الرابط
+  appMode = 'store'; wholesaleUnlocked = true; viewLevel = 'items'; activeCat = key; searchQuery = ''; activeSub = 'all';
+  history.replaceState({ appMode, wholesaleUnlocked, viewLevel, activeCat }, '');
+  renderApp();
+}
+handleInitialDeepLink();
+
+// نسخ رابط مباشر لصفحة شركة معينة (مستخدم من زر "🔗 نسخ رابط الشركة" بلوحة التحكم)
+async function copyCompanyDeepLink(key){
+  const link = `${location.origin}${location.pathname}#${encodeURIComponent(key)}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    alert('✅ تم نسخ الرابط! تقدري تلصقيه وين ما بدك (واتساب، خانة إعلان، إلخ):\n\n' + link);
+  } catch(e){
+    prompt('انسخي الرابط يدوياً من هون:', link);
+  }
+}
 
 </script>
 </body>
