@@ -3126,10 +3126,12 @@ function renderAdminProductList(){
     <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px;">
       <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">✏️ تعديل شركة موجودة (اسم / شعار)</summary>
       <div style="margin-top:12px;">
-      <select id="adm_edit_co_select" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <select id="adm_edit_co_select" onchange="document.getElementById('adm_edit_co_nameAr').value=this.value;" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
         <option value="">-- اختر الشركة --</option>
         ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
       </select>
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">✏️ الاسم الصحيح بالعربي (اختياري — اكتبيه بس لو الاسم الحالي غلط أو ناقص وبدك تصلحيه؛ بينتقل معه تلقائياً كل صنف وكل قسم فرعي مرتبط بهالشركة)</label>
+      <input id="adm_edit_co_nameAr" placeholder="اكتبي الاسم العربي الصحيح هون" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">✏️ الاسم بالإنجليزي (اختياري، اتركيه فاضي لو ما بدك تغييره)</label>
       <input id="adm_edit_co_nameEn" placeholder="مثال: Roaa Chips" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <input id="adm_edit_co_logo" type="hidden" value="">
@@ -4773,21 +4775,73 @@ function updateAdmEditSubSelectOptions(){
 }
 
 // حفظ شعار جديد لشركة موجودة (يشتغل حتى لو الشركة ثابتة بالكود، لأن الشعار الجديد بيطغى عليه)
+// إعادة تسمية شركة بالكامل بالعربي: بينتقل معها تلقائياً كل صنف وكل قسم فرعي وحالة الفتح/القفل المرتبطين فيها للاسم الجديد
+async function renameCompanyEverywhere(oldName, newName){
+  // 1) نحافظ على كل بيانات الشركة القديمة (لوغو، اسم إنجليزي، ترتيب) وننقلها لمستند بالاسم الجديد
+  const oldDoc = await db.collection('companies').doc(oldName).get({ source: 'server' });
+  const oldData = oldDoc.exists ? oldDoc.data() : {};
+  await db.collection('companies').doc(newName).set(Object.assign({}, oldData, { name: newName }), { merge: true });
+  if (oldName !== newName) await db.collection('companies').doc(oldName).delete();
+
+  // 2) ننقل حالة الفتح/القفل الخاصة فيها
+  try {
+    const statusDoc = await db.collection('sectionStatus').doc(oldName).get({ source: 'server' });
+    if (statusDoc.exists){
+      await db.collection('sectionStatus').doc(newName).set(statusDoc.data(), { merge: true });
+      if (oldName !== newName) await db.collection('sectionStatus').doc(oldName).delete();
+    }
+  } catch(e){ /* حالة الفتح/القفل مو أساسية، منكمل حتى لو صار فيها خطأ بسيط */ }
+
+  // 3) ننقل كل صنف كان مصنّف (تلقائياً أو صراحة) تحت الاسم القديم، بتحديد الشركة الجديدة صراحة إله
+  const affectedProducts = PRODUCTS_DATA.filter(p => getBrand(p.name) === oldName);
+  for (const p of affectedProducts){
+    await db.collection('products').doc(String(p.id)).set({ company: newName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  }
+
+  // 4) ننقل كل قسم فرعي (subBrands) مرتبط فيها
+  const subBrandsSnap = await db.collection('subBrands').where('company', '==', oldName).get({ source: 'server' });
+  for (const doc of subBrandsSnap.docs){
+    const d = doc.data();
+    await db.collection('subBrands').doc(`${newName}::${d.key}`).set(Object.assign({}, d, { company: newName }), { merge: true });
+    await db.collection('subBrands').doc(doc.id).delete();
+  }
+
+  // 5) ننقل كل قسم فرعي-فرعي (subSections) مرتبط فيها
+  const subSectionsSnap = await db.collection('subSections').where('company', '==', oldName).get({ source: 'server' });
+  for (const doc of subSectionsSnap.docs){
+    const d = doc.data();
+    await db.collection('subSections').doc(`${newName}::${d.section}::${d.key}`).set(Object.assign({}, d, { company: newName }), { merge: true });
+    await db.collection('subSections').doc(doc.id).delete();
+  }
+
+  return affectedProducts.length;
+}
+
 async function saveEditedCompanyLogo(){
-  const name = document.getElementById('adm_edit_co_select').value;
+  const oldName = document.getElementById('adm_edit_co_select').value;
+  const nameAr = document.getElementById('adm_edit_co_nameAr').value.trim();
   const nameEn = document.getElementById('adm_edit_co_nameEn').value.trim();
   const logo = document.getElementById('adm_edit_co_logo').value.trim();
-  if (!name){ alert('لازم تختار الشركة'); return; }
-  if (!logo && !nameEn){ alert('لازم تعدلي إما الاسم أو الشعار'); return; }
+  if (!oldName){ alert('لازم تختاري الشركة'); return; }
+  const newName = nameAr || oldName;
+  if (!logo && !nameEn && newName === oldName){ alert('لازم تعدلي إما الاسم العربي أو الإنجليزي أو الشعار'); return; }
   try {
-    const docData = { name };
-    if (logo) docData.logo = logo;
-    if (nameEn) docData.nameEn = nameEn;
-    await db.collection('companies').doc(name).set(docData, { merge: true });
+    if (newName !== oldName){
+      const affectedCount = PRODUCTS_DATA.filter(p => getBrand(p.name) === oldName).length;
+      if (!confirm(`رح يتغيّر اسم الشركة من "${oldName}" لـ "${newName}"، وينتقل معه ${affectedCount} صنف وكل أقسامها الفرعية تلقائياً. متأكدة بدك تكملي؟`)) return;
+      await renameCompanyEverywhere(oldName, newName);
+    }
+    const extraData = {};
+    if (logo) extraData.logo = logo;
+    if (nameEn) extraData.nameEn = nameEn;
+    if (Object.keys(extraData).length){
+      await db.collection('companies').doc(newName).set(extraData, { merge: true });
+    }
     alert('تم الحفظ بنجاح ✅');
     document.getElementById('adm_edit_co_logo').value = '';
     document.getElementById('adm_edit_co_logo_preview').innerHTML = '';
     document.getElementById('adm_edit_co_nameEn').value = '';
+    document.getElementById('adm_edit_co_nameAr').value = '';
     document.getElementById('adm_edit_co_select').value = '';
   } catch(e){
     alert('صار خطأ بالحفظ: ' + e.message);
