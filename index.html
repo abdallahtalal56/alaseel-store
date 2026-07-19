@@ -528,8 +528,14 @@
     <div style="background:#336781; border-radius:16px; padding:18px; width:100%; max-width:400px; direction:rtl;">
       <div id="quickEditTitle" style="color:#fff; font-weight:900; font-size:15px; margin-bottom:14px;"></div>
       <input id="qe_unit" placeholder="الوحدة" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
-      <select id="qe_company" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <select id="qe_company" onchange="updateQeSubOptions()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
         <option value="">-- خلي التصنيف التلقائي --</option>
+      </select>
+      <select id="qe_sub" onchange="updateQeSubSubOptions()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+        <option value="">-- بدون قسم فرعي --</option>
+      </select>
+      <select id="qe_subsub" style="width:100%; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+        <option value="">-- بدون قسم فرعي-فرعي --</option>
       </select>
       <div style="display:flex; gap:8px; margin-bottom:8px;">
         <input id="qe_retail" type="number" step="0.01" placeholder="سعر المفرق" style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px;">
@@ -2959,6 +2965,29 @@ function toggleAdminFabMenu(){
 
 // ===== نافذة التعديل السريع لصنف واحد أثناء التصفح =====
 let _quickEditProductId = null;
+// عند اختيار شركة بنافذة "تصليح" السريعة، نعبّي قائمة أقسامها الفرعية (مع تحديد القسم الحالي لو موجود)
+function updateQeSubOptions(currentSub){
+  const companySelect = document.getElementById('qe_company');
+  const subSelect = document.getElementById('qe_sub');
+  if (!companySelect || !subSelect) return;
+  const company = companySelect.value;
+  const subs = company ? getSubBrandsForCompany(company) : [];
+  subSelect.innerHTML = `<option value="">-- بدون قسم فرعي --</option>` +
+    subs.map(sb => `<option value="${sb.key}" ${currentSub === sb.key ? 'selected' : ''}>${sb.name}</option>`).join('');
+  updateQeSubSubOptions();
+}
+// عند اختيار قسم فرعي بنافذة "تصليح" السريعة، نعبّي قائمة الأقسام الفرعية-الفرعية (المستوى الثالث)
+function updateQeSubSubOptions(currentSubSub){
+  const companySelect = document.getElementById('qe_company');
+  const subSelect = document.getElementById('qe_sub');
+  const subSubSelect = document.getElementById('qe_subsub');
+  if (!companySelect || !subSelect || !subSubSelect) return;
+  const company = companySelect.value;
+  const section = subSelect.value;
+  const subSections = (company && section) ? getSubSectionsFor(company, section) : [];
+  subSubSelect.innerHTML = `<option value="">-- بدون قسم فرعي-فرعي --</option>` +
+    subSections.map(ss => `<option value="${ss.key}" ${currentSubSub === ss.key ? 'selected' : ''}>${ss.name}</option>`).join('');
+}
 function openQuickEditModal(id){
   const p = PRODUCTS_DATA.find(x => x.id === id);
   if (!p) return;
@@ -2978,6 +3007,8 @@ function openQuickEditModal(id){
   if (!validBrands.includes(currentBrand)){
     companySelect.insertAdjacentHTML('afterbegin', `<option value="" selected>⚠️ حالياً: "${currentBrand}" (مختفٍ! اختاري شركة صحيحة تحت)</option>`);
   }
+  updateQeSubOptions(p.sub || '');
+  updateQeSubSubOptions(p.subsub || '');
   document.getElementById('quickEditModal').style.display = 'flex';
 }
 function closeQuickEditModal(){
@@ -2991,10 +3022,14 @@ async function saveQuickEdit(){
   const priceWholesale = parseFloat(document.getElementById('qe_wholesale').value) || 0;
   const image = document.getElementById('qe_image').value.trim();
   const company = document.getElementById('qe_company').value;
+  const sub = document.getElementById('qe_sub').value;
+  const subsub = document.getElementById('qe_subsub').value;
   try {
     const docData = { unit, priceRetail, priceWholesale, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (image) docData.image = image;
     if (company) docData.company = company; else docData.company = firebase.firestore.FieldValue.delete();
+    docData.sub = sub || firebase.firestore.FieldValue.delete();
+    docData.subsub = subsub || firebase.firestore.FieldValue.delete();
     await db.collection('products').doc(String(_quickEditProductId)).set(docData, { merge: true });
     closeQuickEditModal();
   } catch(e){
@@ -3204,6 +3239,9 @@ function renderAdminProductList(){
     <div style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid #5B95B8; text-align:center;">
       <div style="color:#ccc; font-size:12px; margin-bottom:8px;">🔍 لقينا سبب اختفاء بعض الأصناف: أصناف اسمها ما يتطابق مع أي شركة معروفة، فبتختفي كلياً بدون ما تظهر بأي مكان. دوسي هون لتكشفيهم وتصلحيهم.</div>
       <button onclick="findUncategorizedProducts()" style="width:100%; padding:10px; border-radius:8px; border:none; background:#5B95B8; color:#fff; font-weight:900; font-size:14px;">🔍 فحص الأصناف المختفية (بدون شركة)</button>
+      <div id="uncategorizedSearchBox" style="display:none; margin-top:10px;">
+        <input id="uncategorizedSearchInput" type="text" placeholder="🔍 دوري باسم الصنف بالقائمة تحت..." oninput="renderUncategorizedList(this.value)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; direction:rtl;">
+      </div>
       <div id="uncategorizedResult" style="margin-top:10px; font-size:13px; color:#ccc; text-align:right;"></div>
     </div>
 
@@ -5704,22 +5742,40 @@ function handleSearch(val){
 
 // ===== تحديث دقيق فوري: يمسح الكاش المحلي ويجيب كل الأصناف طازة من قاعدة البيانات مباشرة =====
 // فحص شامل: أي صنف انصنّف بأي اسم شركة مو موجود ضمن البطاقات المعروضة فعلياً، بيختفي بصمت من الموقع
+window._uncategorizedStrays = null;
 function findUncategorizedProducts(){
-  const resultBox = document.getElementById('uncategorizedResult');
   const displayedBrands = new Set(getWholesaleBrandCats().map(c => c.name));
   const strays = PRODUCTS_DATA.filter(p => !displayedBrands.has(getBrand(p.name)));
+  window._uncategorizedStrays = strays;
+  const searchBox = document.getElementById('uncategorizedSearchBox');
+  const searchInput = document.getElementById('uncategorizedSearchInput');
+  if (searchBox) searchBox.style.display = strays.length ? 'block' : 'none';
+  if (searchInput) searchInput.value = '';
+  renderUncategorizedList('');
+}
+// فلترة قائمة الأصناف المختفية حسب اسم الصنف (تنادى تلقائياً كل ما الشخص يكتب بخانة البحث)
+function renderUncategorizedList(filterText){
+  const resultBox = document.getElementById('uncategorizedResult');
+  if (!resultBox) return;
+  const strays = window._uncategorizedStrays || [];
   if (strays.length === 0){
     resultBox.innerHTML = '<div style="color:#4caf50;">✅ ما فيه ولا صنف مختفٍ — كل الأصناف مصنّفة لشركة ظاهرة فعلياً.</div>';
     return;
   }
+  const q = (filterText || '').trim();
+  const filtered = q ? strays.filter(p => p.name.includes(q)) : strays;
+  if (filtered.length === 0){
+    resultBox.innerHTML = '<div style="color:#ccc;">ما في نتائج مطابقة لبحثك.</div>';
+    return;
+  }
   // نجمعهم حسب التصنيف الخفي اللي وقعوا فيه، عشان يكون واضح ليش اختفوا
   const byHiddenBrand = {};
-  strays.forEach(p => {
+  filtered.forEach(p => {
     const b = getBrand(p.name);
     if (!byHiddenBrand[b]) byHiddenBrand[b] = [];
     byHiddenBrand[b].push(p);
   });
-  let html = `<div style="color:#ffb3b3; font-weight:800; margin-bottom:8px;">⚠️ لقيت ${strays.length} صنف مختفٍ:</div>`;
+  let html = `<div style="color:#ffb3b3; font-weight:800; margin-bottom:8px;">⚠️ لقيت ${filtered.length} صنف مختفٍ${q ? ' (من أصل ' + strays.length + ')' : ''}:</div>`;
   Object.keys(byHiddenBrand).forEach(hiddenBrand => {
     html += `<div style="background:#2A5670; border-radius:8px; padding:8px; margin-bottom:8px;">
       <div style="color:var(--gold); font-weight:800; font-size:12px; margin-bottom:6px;">تصنيف مخفي: "${hiddenBrand}" (${byHiddenBrand[hiddenBrand].length} صنف)</div>`;
