@@ -2646,6 +2646,14 @@ function renderApp(){
       companyMarqueeSlot.style.display = 'none';
       document.getElementById('adBannerSlot').style.display = 'block';
       renderAdBanner();
+    } else if (viewLevel === 'items' && !!searchQuery) {
+      // أثناء أي بحث (سواء جوا شركة معينة أو بشكل عام)، منخفي شريط الترحيب وشريط الموقع لأنهم مش مكانهم بشاشة نتائج بحث
+      heroSection.style.display = 'none';
+      locBanner.style.display = 'none';
+      brandProfileSlot.style.display = 'none';
+      brandProfileSlot.innerHTML = '';
+      companyMarqueeSlot.style.display = 'none';
+      document.getElementById('adBannerSlot').style.display = 'none';
     } else {
       heroSection.style.display = '';
       locBanner.style.display = '';
@@ -5615,6 +5623,8 @@ function renderItemsView(){
   let subset = PRODUCTS_DATA.filter(p => {
     if (searchQuery) {
       if (!p.name.includes(searchQuery)) return false;
+      // لو عم نبحث جوا صفحة شركة محددة، نحصر النتائج بأصناف هالشركة بس (مش كل الشركات سوا)
+      if (isBrandCat) return getBrand(p.name) === brandName;
       // نفس منطق التصفية العادي: بوضع الجملة نعرض بس الأصناف المصنّفة لشركة معروفة،
       // وبوضع المفرق نستثني الأصناف المخصصة للجملة فقط
       if (wholesaleUnlocked) return getBrand(p.name) !== "أصناف أخرى";
