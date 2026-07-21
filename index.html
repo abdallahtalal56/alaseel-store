@@ -5554,15 +5554,27 @@ function renderAdBanner(){
   const dotsWrap = document.getElementById('adBannerDots');
   if (!AD_BANNERS.length){ viewport.innerHTML = ''; dotsWrap.innerHTML = ''; return; }
 
-  viewport.innerHTML = AD_BANNERS.map((ad, i) => `
-    <a class="ad-banner-slide${i === 0 ? ' active' : ''}" data-idx="${i}" href="${ad.link}" target="_blank" rel="noopener">
+  viewport.innerHTML = AD_BANNERS.map((ad, i) => {
+    // لو الرابط داخلي (رابط شركة مولّد تلقائياً من اختيار شركة)، منفتحه بالتنقل المباشر جوا التطبيق
+    // بدل ما نعتمد على href + تبويب جديد، لأنه بعض متصفحات الموبايل ما بتتعامل صح مع فتح تبويب جديد
+    // لنفس الموقع، وبترجع الزبون على الشاشة الرئيسية بدل ما توديه لصفحة الشركة
+    const hashMarker = '#brand::';
+    const hashIdx = (ad.link || '').indexOf(hashMarker);
+    const isInternalLink = hashIdx !== -1;
+    const clickAttr = isInternalLink
+      ? `onclick="event.preventDefault(); navigateToCategory(decodeURIComponent('${ad.link.slice(hashIdx + 1).replace(/'/g,"\\'")}'));"`
+      : '';
+    const hrefAttrs = isInternalLink ? `href="javascript:void(0)"` : `href="${ad.link}" target="_blank" rel="noopener"`;
+    return `
+    <a class="ad-banner-slide${i === 0 ? ' active' : ''}" data-idx="${i}" ${hrefAttrs} ${clickAttr}>
       ${ad.image ? `<img src="${ad.image}">` : ''}
       <div class="ad-banner-slide-text">
         <div class="ad-banner-slide-title">${ad.title}</div>
         <div class="ad-banner-slide-sub">${ad.sub}</div>
       </div>
     </a>
-  `).join('');
+  `;
+  }).join('');
 
   dotsWrap.innerHTML = AD_BANNERS.map((_, i) => `
     <div class="ad-banner-dot${i === 0 ? ' active' : ''}" onclick="goToAdBanner(${i})"></div>
