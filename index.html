@@ -708,6 +708,7 @@
           <span class="mode-card-desc">متوقف حاليًا — تحت المعالجة</span>
         </span>
       </button>
+      <div onclick="resetCustomerRegistration()" style="margin-top:14px; text-align:center; color:rgba(255,255,255,0.6); font-size:12px; text-decoration:underline; cursor:pointer;">سجّلت بيانات غلط أو اخترت نوع حساب غلط؟ اضغطي هون لتصحيحه</div>
     </div>
   </div>
 
@@ -6899,6 +6900,15 @@ function recordVisitor(phone, name, isNewDevice, type, regImage, location){
   try {
     db.collection('settings').doc('visitCounter').set({ count: firebase.firestore.FieldValue.increment(1) }, { merge: true }).catch(()=>{});
   } catch(e){}
+}
+
+// تصحيح نوع الحساب لو اختاره الزبون غلط (مثلاً تاجر ضغط "مستهلك" بالغلط) — بيمسح تسجيله ويرجعه لبوابة الدخول من جديد
+function resetCustomerRegistration(){
+  if (!confirm('رح نرجعك لصفحة التسجيل من جديد عشان تختاري نوع الحساب الصحيح وتعبّي بياناتك مرة ثانية. أكملي؟')) return;
+  localStorage.removeItem('alaseel_visitor_phone');
+  localStorage.removeItem('alaseel_visitor_name');
+  localStorage.removeItem('alaseel_customer_type');
+  location.reload();
 }
 
 function submitPhoneGate(){
