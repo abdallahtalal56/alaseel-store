@@ -2751,6 +2751,7 @@ function renderApp(){
     if (isCompanyMainView) {
       heroSection.style.display = 'none';
       locBanner.style.display = 'none';
+      document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'block';
       brandProfileSlot.innerHTML = currentProfileBrand === NTDCO_BRAND_NAME ? generateNtdcoProfileCard() : (currentProfileBrand === TRANSMED_BRAND_NAME ? generateTransmedProfileCard() : (currentProfileBrand === KHALAF_BRAND_NAME ? generateKhalafProfileCard() : (currentProfileBrand === PURECLEAN_BRAND_NAME ? generatePureCleanProfileCard() : (currentProfileBrand === SHAMS_BRAND_NAME ? generateShamsProfileCard() : ((currentProfileBrand === ROAA_BRAND_NAME || (currentProfileBrand && currentProfileBrand.includes('شيبس'))) ? generateRoaaProfileCard() : generateHappinessProfileCard())))));
       companyMarqueeSlot.style.display = 'none';
@@ -2758,6 +2759,7 @@ function renderApp(){
     } else if (isBrandView) {
       heroSection.style.display = 'none';
       locBanner.style.display = 'none';
+      document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
       companyMarqueeSlot.style.display = 'none';
@@ -2765,6 +2767,7 @@ function renderApp(){
     } else if (isCompanyListView) {
       heroSection.style.display = 'none';
       locBanner.style.display = 'none';
+      document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
       companyMarqueeSlot.style.display = 'none';
@@ -5558,11 +5561,15 @@ function renderAdBanner(){
     // لو الرابط داخلي (رابط شركة مولّد تلقائياً من اختيار شركة)، منفتحه بالتنقل المباشر جوا التطبيق
     // بدل ما نعتمد على href + تبويب جديد، لأنه بعض متصفحات الموبايل ما بتتعامل صح مع فتح تبويب جديد
     // لنفس الموقع، وبترجع الزبون على الشاشة الرئيسية بدل ما توديه لصفحة الشركة
-    const hashMarker = '#brand::';
-    const hashIdx = (ad.link || '').indexOf(hashMarker);
-    const isInternalLink = hashIdx !== -1;
+    const baseUrl = `${location.origin}${location.pathname}#`;
+    const isInternalLink = (ad.link || '').startsWith(baseUrl);
+    let internalKey = '';
+    if (isInternalLink){
+      const rawKey = ad.link.slice(baseUrl.length);
+      try { internalKey = decodeURIComponent(rawKey); } catch(e){ internalKey = rawKey; }
+    }
     const clickAttr = isInternalLink
-      ? `onclick="event.preventDefault(); navigateToCategory(decodeURIComponent('${ad.link.slice(hashIdx + 1).replace(/'/g,"\\'")}'));"`
+      ? `onclick="event.preventDefault(); navigateToCategory('${internalKey.replace(/'/g,"\\'")}');"`
       : '';
     const hrefAttrs = isInternalLink ? `href="javascript:void(0)"` : `href="${ad.link}" target="_blank" rel="noopener"`;
     return `
