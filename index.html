@@ -506,17 +506,40 @@
   @keyframes splashSpin{ to{ transform:rotate(360deg); } }
 </style>
 
-<div id="phoneGateOverlay" style="display:none; position:fixed; inset:0; background:linear-gradient(160deg,#2A5670,#336781); z-index:20000; align-items:center; justify-content:center; padding:24px; direction:rtl;">
-  <div style="max-width:380px; width:100%; text-align:center;">
+<div id="phoneGateOverlay" style="display:none; position:fixed; inset:0; background:linear-gradient(160deg,#2A5670,#336781); z-index:20000; align-items:center; justify-content:center; padding:24px; direction:rtl; overflow-y:auto;">
+  <div style="max-width:380px; width:100%; text-align:center; margin:auto;">
     <div style="width:74px; height:74px; border-radius:50%; background:#fff; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.3);">
       <img id="phoneGateLogo" style="width:100%; height:100%; object-fit:cover;">
     </div>
     <div style="color:#fff; font-weight:900; font-size:19px; margin-bottom:8px;">أهلاً بك في الأصيل للتوزيعات الغذائية</div>
-    <div style="color:#bbb; font-size:13px; margin-bottom:20px; line-height:1.6;">قبل ما تتصفح المتجر، يرجى كتابة رقم جوالك عشان نقدر نخدمك بشكل أفضل ونوصلك بفريقنا عند اللزوم.</div>
-    <input id="phoneGateName" type="text" placeholder="اسم المحل أو الاسم الشخصي" style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #444; background:#2A5670; color:#fff; font-size:15px; text-align:center; margin-bottom:10px;">
-    <input id="phoneGateInput" type="tel" placeholder="مثال: 07XXXXXXXX" style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #444; background:#2A5670; color:#fff; font-size:16px; text-align:center; margin-bottom:10px;">
-    <div id="phoneGateError" style="color:#ff6b6b; font-size:12.5px; margin-bottom:12px; min-height:16px;"></div>
-    <button onclick="submitPhoneGate()" style="width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,#F4A272,#D97A4A); color:#fff; font-weight:900; font-size:15px; cursor:pointer;">✅ دخول المتجر</button>
+
+    <!-- الخطوة 1: نوع الحساب (تاجر أو مستهلك) -->
+    <div id="gateTypeStep">
+      <div style="color:#bbb; font-size:13px; margin-bottom:18px; line-height:1.6;">قبل ما تتصفح المتجر، اختار نوع حسابك:</div>
+      <button onclick="selectGateType('trader')" style="width:100%; padding:16px; border:none; border-radius:14px; background:#336781; border:1.5px solid var(--gold); color:#fff; font-weight:900; font-size:15px; cursor:pointer; margin-bottom:12px;">🏢 تاجر — بدي أسعار الجملة</button>
+      <button onclick="selectGateType('consumer')" style="width:100%; padding:16px; border:none; border-radius:14px; background:#336781; border:1.5px solid var(--gold); color:#fff; font-weight:900; font-size:15px; cursor:pointer;">🛍️ مستهلك — بدي أتسوق مفرق</button>
+    </div>
+
+    <!-- الخطوة 2: فورم البيانات، حسب نوع الحساب المختار -->
+    <div id="gateFormStep" style="display:none;">
+      <div id="gateFormDesc" style="color:#bbb; font-size:13px; margin-bottom:16px; line-height:1.6;"></div>
+      <input id="phoneGateName" type="text" placeholder="" style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #444; background:#2A5670; color:#fff; font-size:15px; text-align:center; margin-bottom:10px;">
+      <input id="phoneGateInput" type="tel" placeholder="مثال: 07XXXXXXXX" style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #444; background:#2A5670; color:#fff; font-size:16px; text-align:center; margin-bottom:10px;">
+
+      <div id="gateTraderExtra" style="display:none; text-align:right; margin-bottom:10px;">
+        <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">📷 صورة السجل التجاري</label>
+        <input id="gateRegImage" type="hidden" value="">
+        <input id="gateRegImageFile" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
+        <div id="gateRegImagePreview" style="color:#aaa; font-size:12px;"></div>
+      </div>
+
+      <button onclick="requestGateLocation()" id="gateLocBtn" style="width:100%; padding:11px; border:none; border-radius:12px; background:#5B95B8; color:#fff; font-weight:800; font-size:13px; cursor:pointer; margin-bottom:6px;">📍 تحديد الموقع</button>
+      <div id="gateLocStatus" style="color:#bbb; font-size:11.5px; margin-bottom:10px; min-height:14px;"></div>
+
+      <div id="phoneGateError" style="color:#ff6b6b; font-size:12.5px; margin-bottom:12px; min-height:16px;"></div>
+      <button onclick="submitPhoneGate()" style="width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,#F4A272,#D97A4A); color:#fff; font-weight:900; font-size:15px; cursor:pointer; margin-bottom:10px;">✅ دخول المتجر</button>
+      <button onclick="backToGateTypeStep()" style="width:100%; padding:8px; border:none; background:transparent; color:#bbb; font-size:12.5px; cursor:pointer; text-decoration:underline;">‹ رجوع لاختيار نوع الحساب</button>
+    </div>
   </div>
 </div>
 
@@ -671,7 +694,7 @@
     })();
   </script>
       <div class="mode-select-title"><span style="font-size:13px; font-weight:500; color:rgba(255,255,255,0.75);">يرجى اختيار فئة الحساب للتسوق</span></div>
-      <button class="mode-card mode-card-wholesale" id="modeCardWholesale" onclick="enterWholesaleMode()">
+      <button class="mode-card mode-card-wholesale" id="modeCardWholesale" onclick="enterWholesaleModeGated()">
         <span class="mode-card-icon">🏢</span>
         <span class="mode-card-text">
           <span class="mode-card-name">جملة / تاجر</span>
@@ -1136,9 +1159,19 @@ function applyGlobalSettingsToModeCards(){
     retailBtn.querySelector('.mode-card-desc').textContent = 'متوقف حاليًا — تحت المعالجة';
   }
   if (GLOBAL_SETTINGS.wholesaleEnabled){
-    wholesaleBtn.classList.remove('mode-card-locked');
-    wholesaleBtn.onclick = enterWholesaleMode;
-    wholesaleBtn.querySelector('.mode-card-desc').textContent = 'تسوق بأسعار الجملة الخاصة بالتجار';
+    const isConsumer = localStorage.getItem('alaseel_customer_type') === 'consumer';
+    if (isConsumer && !adminEditMode){
+      // حفاظاً على قسم الجملة، ما نسمح لأي حساب سجّل نفسه كـ"مستهلك" بالبوابة الأولى إنه يدخله
+      wholesaleBtn.classList.add('mode-card-locked');
+      wholesaleBtn.onclick = handleConsumerBlockedFromWholesale;
+      wholesaleBtn.querySelector('.mode-card-icon').textContent = '🔒';
+      wholesaleBtn.querySelector('.mode-card-desc').textContent = 'قسم خاص بالتجار المسجّلين فقط';
+    } else {
+      wholesaleBtn.classList.remove('mode-card-locked');
+      wholesaleBtn.querySelector('.mode-card-icon').textContent = '🏢';
+      wholesaleBtn.onclick = enterWholesaleMode;
+      wholesaleBtn.querySelector('.mode-card-desc').textContent = 'تسوق بأسعار الجملة الخاصة بالتجار';
+    }
   } else {
     wholesaleBtn.classList.add('mode-card-locked');
     wholesaleBtn.onclick = handleWholesaleLockedClick;
@@ -2903,6 +2936,17 @@ function handleRetailLockedClick(){
 function handleWholesaleLockedClick(){
   if (adminEditMode){ enterWholesaleMode(); return; }
   alert('قسم الجملة متوقف حاليًا لأنه تحت المعالجة والتطوير. تابعونا قريبًا 🙏');
+}
+function handleConsumerBlockedFromWholesale(){
+  alert('قسم الجملة مخصص للتجار المسجّلين بس. إذا عندك محل تجاري وبدك توصلي كتاجر، تواصلي معنا عشان نفعّلك.');
+}
+// نسخة آمنة تتأكد من نوع الحساب قبل الدخول (تُستخدم كافتراضي بالزر لحد ما يتحمّل applyGlobalSettingsToModeCards)
+function enterWholesaleModeGated(){
+  if (localStorage.getItem('alaseel_customer_type') === 'consumer' && !adminEditMode){
+    handleConsumerBlockedFromWholesale();
+    return;
+  }
+  enterWholesaleMode();
 }
 function enterRetailMode(){
   appMode = 'store'; wholesaleUnlocked = false; viewLevel = 'items'; activeCat = '__retail_offers__'; searchQuery = ''; activeSub = 'all'; activeOfferId = null;
@@ -6788,6 +6832,7 @@ document.getElementById('topbarLogoImg').src = ASEEL_OFFICIAL_LOGO;
 document.getElementById('topbarLogoImg').style.display = 'block';
 document.getElementById('topbarLogoFallback').style.display = 'none';
 document.getElementById('phoneGateLogo').src = ASEEL_OFFICIAL_LOGO;
+wireImageFileInput('gateRegImageFile', 'gateRegImage', 'gateRegImagePreview');
 
 // بوابة رقم الجوال الإجبارية قبل دخول المتجر
 function isValidGatePhone(v){
@@ -6795,7 +6840,47 @@ function isValidGatePhone(v){
   return digits.length >= 8;
 }
 
-function recordVisitor(phone, name, isNewDevice){
+// نوع الحساب المختار بالبوابة الأولى (تاجر/مستهلك) وموقعه، قبل ما يكمل الفورم ويدخل المتجر
+let _gateType = null;
+let _gateLocation = null;
+
+function selectGateType(type){
+  _gateType = type;
+  document.getElementById('gateTypeStep').style.display = 'none';
+  document.getElementById('gateFormStep').style.display = 'block';
+  document.getElementById('gateTraderExtra').style.display = (type === 'trader') ? 'block' : 'none';
+  document.getElementById('phoneGateName').placeholder = (type === 'trader') ? 'اسم المحل' : 'الاسم الشخصي';
+  document.getElementById('gateFormDesc').textContent = (type === 'trader')
+    ? 'عبّي بيانات محلك عشان نفعّلك قسم الجملة بأسعار التجار.'
+    : 'عبّي بياناتك عشان تقدر تتسوق مباشرة.';
+}
+function backToGateTypeStep(){
+  document.getElementById('gateFormStep').style.display = 'none';
+  document.getElementById('gateTypeStep').style.display = 'block';
+  document.getElementById('phoneGateError').textContent = '';
+}
+function requestGateLocation(){
+  const statusEl = document.getElementById('gateLocStatus');
+  const btn = document.getElementById('gateLocBtn');
+  if (!navigator.geolocation){ statusEl.textContent = 'الـ GPS غير مدعوم بجهازك'; return; }
+  statusEl.textContent = 'جاري تحديد الموقع...';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      _gateLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      statusEl.textContent = '✅ تم تحديد الموقع بنجاح';
+      btn.textContent = '✅ تم التحديد';
+      btn.style.background = 'var(--green)';
+    },
+    () => {
+      statusEl.textContent = '❌ ما قدرنا نحدد الموقع، جربي مرة ثانية أو كملي بدونه';
+      btn.disabled = false;
+    },
+    { enableHighAccuracy: false, timeout: 8000 }
+  );
+}
+
+function recordVisitor(phone, name, isNewDevice, type, regImage, location){
   try {
     const ref = db.collection('visitors').doc(phone);
     const updateData = {
@@ -6805,6 +6890,9 @@ function recordVisitor(phone, name, isNewDevice){
       visitCount: firebase.firestore.FieldValue.increment(1)
     };
     if (isNewDevice) updateData.firstSeen = firebase.firestore.FieldValue.serverTimestamp();
+    if (type) updateData.type = type;
+    if (regImage) updateData.registrationImage = regImage;
+    if (location) updateData.location = location;
     ref.set(updateData, { merge: true }).catch(()=>{});
   } catch(e){ /* لا نمنع دخول الزبون للمتجر حتى لو فشل تسجيل الزيارة */ }
   // ===== عداد زيارات إجمالي بسيط (رقم فقط، مستقل تماماً عن نظام الزوار أعلاه) =====
@@ -6819,19 +6907,33 @@ function submitPhoneGate(){
   const errBox = document.getElementById('phoneGateError');
   const name = nameInput.value.trim();
   const phone = input.value.trim();
+  if (!_gateType){
+    errBox.textContent = 'يرجى اختيار نوع الحساب (تاجر/مستهلك)';
+    return;
+  }
   if (!name){
-    errBox.textContent = 'يرجى كتابة اسم المحل أو الاسم الشخصي';
+    errBox.textContent = _gateType === 'trader' ? 'يرجى كتابة اسم المحل' : 'يرجى كتابة الاسم الشخصي';
     return;
   }
   if (!isValidGatePhone(phone)){
     errBox.textContent = 'يرجى كتابة رقم جوال صحيح';
     return;
   }
+  let regImage = '';
+  if (_gateType === 'trader'){
+    regImage = document.getElementById('gateRegImage').value.trim();
+    if (!regImage){
+      errBox.textContent = 'يرجى رفع صورة السجل التجاري';
+      return;
+    }
+  }
+  errBox.textContent = '';
   localStorage.setItem('alaseel_visitor_phone', phone);
   localStorage.setItem('alaseel_visitor_name', name);
+  localStorage.setItem('alaseel_customer_type', _gateType);
   if (!localStorage.getItem('alaseel_phone')) localStorage.setItem('alaseel_phone', phone);
   if (!localStorage.getItem('alaseel_name')) localStorage.setItem('alaseel_name', name);
-  recordVisitor(phone, name, true);
+  recordVisitor(phone, name, true, _gateType, regImage, _gateLocation);
   document.getElementById('phoneGateOverlay').style.display = 'none';
   startApp();
 }
