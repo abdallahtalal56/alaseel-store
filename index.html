@@ -3269,6 +3269,12 @@ function renderAdminProductList(){
       <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">📷 شعار الشركة (رفع من الموبايل)</label>
       <input id="adm_co_logo_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
       <div id="adm_co_logo_preview" style="color:#aaa; font-size:12px; margin-bottom:10px;"></div>
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">📝 نص الهوية التعريفية (اختياري — بيظهر كبطاقة تعريف فوق أصناف الشركة)</label>
+      <textarea id="adm_co_intro_text" placeholder="اكتبي وصف/هوية الشركة هون" rows="3" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px; resize:vertical;"></textarea>
+      <input id="adm_co_intro_image" type="hidden" value="">
+      <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">🖼️ صورة خلفية الهوية (اختياري، منفصلة عن الشعار)</label>
+      <input id="adm_co_intro_image_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
+      <div id="adm_co_intro_image_preview" style="color:#aaa; font-size:12px; margin-bottom:10px;"></div>
       <select id="adm_co_status" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:10px;">
         <option value="open">✅ فعّال (يظهر مفتوح للزباين)</option>
         <option value="locked">🔒 تحت المعالجة (يظهر مقفول)</option>
@@ -3296,7 +3302,7 @@ function renderAdminProductList(){
     <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px;">
       <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">✏️ تعديل شركة موجودة (اسم / شعار)</summary>
       <div style="margin-top:12px;">
-      <select id="adm_edit_co_select" onchange="document.getElementById('adm_edit_co_nameAr').value=this.value; document.getElementById('adm_edit_co_verified').checked = !!(window.DYNAMIC_COMPANIES[this.value] && window.DYNAMIC_COMPANIES[this.value].verified);" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <select id="adm_edit_co_select" onchange="document.getElementById('adm_edit_co_nameAr').value=this.value; document.getElementById('adm_edit_co_verified').checked = !!(window.DYNAMIC_COMPANIES[this.value] && window.DYNAMIC_COMPANIES[this.value].verified); document.getElementById('adm_edit_co_intro_text').value = (window.DYNAMIC_COMPANIES[this.value] && window.DYNAMIC_COMPANIES[this.value].introText) || '';" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
         <option value="">-- اختر الشركة --</option>
         ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
       </select>
@@ -3312,6 +3318,12 @@ function renderAdminProductList(){
       <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">📷 الشعار الجديد (رفع من الموبايل، اختياري)</label>
       <input id="adm_edit_co_logo_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
       <div id="adm_edit_co_logo_preview" style="color:#aaa; font-size:12px; margin-bottom:10px;"></div>
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">📝 نص الهوية التعريفية (اختياري — بيظهر كبطاقة تعريف فوق أصناف الشركة)</label>
+      <textarea id="adm_edit_co_intro_text" placeholder="اكتبي وصف/هوية الشركة هون" rows="3" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px; resize:vertical;"></textarea>
+      <input id="adm_edit_co_intro_image" type="hidden" value="">
+      <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">🖼️ صورة خلفية الهوية الجديدة (رفع من الموبايل، اختياري)</label>
+      <input id="adm_edit_co_intro_image_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
+      <div id="adm_edit_co_intro_image_preview" style="color:#aaa; font-size:12px; margin-bottom:10px;"></div>
       <button onclick="saveEditedCompanyLogo()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px;">💾 حفظ التعديلات</button>
       </div>
     </details>
@@ -3532,8 +3544,8 @@ function renderAdminProductList(){
       <div style="margin-top:12px;">
       <input id="adm_slide_title" placeholder="عنوان الشريحة" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <input id="adm_slide_sub" placeholder="النص الفرعي" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
-      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">🏢 اختاري الشركة (لو محددة، الإعلان بيوجّه تلقائياً لصفحتها — ما في داعي لأي رابط يدوي)</label>
-      <select id="adm_slide_company" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">🏢 اختاري الشركة (بس اختاريها وبتتعبى صورتها واسمها تلقائياً، بالضبط متل لوحة العروض بالمفرق — تقدري تعدّلي عليهم بعدين لو بدك)</label>
+      <select id="adm_slide_company" onchange="autoFillSlideFromCompany()" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
         <option value="">-- بدون شركة (استخدمي رابط يدوي تحت لو بدك) --</option>
         ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
       </select>
@@ -3593,8 +3605,10 @@ function renderAdminProductList(){
   renderAdminResultsOnly();
   wireImageFileInput('adm_new_image_file', 'adm_new_image', 'adm_new_image_preview');
   wireImageFileInput('adm_co_logo_file', 'adm_co_logo', 'adm_co_logo_preview');
+  wireImageFileInput('adm_co_intro_image_file', 'adm_co_intro_image', 'adm_co_intro_image_preview');
   wireImageFileInput('adm_sub_logo_file', 'adm_sub_logo', 'adm_sub_logo_preview');
   wireImageFileInput('adm_edit_co_logo_file', 'adm_edit_co_logo', 'adm_edit_co_logo_preview');
+  wireImageFileInput('adm_edit_co_intro_image_file', 'adm_edit_co_intro_image', 'adm_edit_co_intro_image_preview');
   wireImageFileInput('adm_edit_sub_logo_file', 'adm_edit_sub_logo', 'adm_edit_sub_logo_preview');
   wireImageFileInput('adm_newss_logo_file', 'adm_newss_logo', 'adm_newss_logo_preview');
   wireImageFileInput('adm_slide_image_file', 'adm_slide_image', 'adm_slide_image_preview');
@@ -4583,6 +4597,19 @@ function exportReportCSV(type){
 }
 
 // ============ إدارة الشرائح الإعلانية ============
+// عند اختيار شركة باللوحة الإعلانية بالجملة، نعبّي الاسم والصورة تلقائياً من بياناتها (بالضبط متل لوحة العروض بالمفرق)
+function autoFillSlideFromCompany(){
+  const company = document.getElementById('adm_slide_company').value;
+  if (!company) return;
+  const titleInput = document.getElementById('adm_slide_title');
+  if (!titleInput.value.trim()) titleInput.value = company;
+  const coInfo = (window.DYNAMIC_COMPANIES || {})[company];
+  const logo = coInfo && (coInfo.introImage || coInfo.logo);
+  if (logo){
+    document.getElementById('adm_slide_image').value = logo;
+    document.getElementById('adm_slide_image_preview').innerHTML = `<img src="${logo}" style="max-width:100%; border-radius:8px;">`;
+  }
+}
 async function addAdBannerSlide(){
   const title = document.getElementById('adm_slide_title').value.trim();
   const sub = document.getElementById('adm_slide_sub').value.trim();
@@ -5130,6 +5157,8 @@ async function saveEditedCompanyLogo(){
   const nameAr = document.getElementById('adm_edit_co_nameAr').value.trim();
   const nameEn = document.getElementById('adm_edit_co_nameEn').value.trim();
   const logo = document.getElementById('adm_edit_co_logo').value.trim();
+  const introText = document.getElementById('adm_edit_co_intro_text').value.trim();
+  const introImage = document.getElementById('adm_edit_co_intro_image').value.trim();
   const verified = document.getElementById('adm_edit_co_verified').checked;
   if (!oldName){ alert('لازم تختاري الشركة'); return; }
   const newName = nameAr || oldName;
@@ -5139,15 +5168,19 @@ async function saveEditedCompanyLogo(){
       if (!confirm(`رح يتغيّر اسم الشركة من "${oldName}" لـ "${newName}"، وينتقل معه ${affectedCount} صنف وكل أقسامها الفرعية تلقائياً. متأكدة بدك تكملي؟`)) return;
       await renameCompanyEverywhere(oldName, newName);
     }
-    const extraData = { verified };
+    const extraData = { verified, introText };
     if (logo) extraData.logo = logo;
     if (nameEn) extraData.nameEn = nameEn;
+    if (introImage) extraData.introImage = introImage;
     await db.collection('companies').doc(newName).set(extraData, { merge: true });
     alert('تم الحفظ بنجاح ✅');
     document.getElementById('adm_edit_co_logo').value = '';
     document.getElementById('adm_edit_co_logo_preview').innerHTML = '';
     document.getElementById('adm_edit_co_nameEn').value = '';
     document.getElementById('adm_edit_co_nameAr').value = '';
+    document.getElementById('adm_edit_co_intro_text').value = '';
+    document.getElementById('adm_edit_co_intro_image').value = '';
+    document.getElementById('adm_edit_co_intro_image_preview').innerHTML = '';
     document.getElementById('adm_edit_co_verified').checked = false;
     document.getElementById('adm_edit_co_select').value = '';
   } catch(e){
@@ -5452,11 +5485,13 @@ async function addAdminCompany(){
   const name = document.getElementById('adm_co_name').value.trim();
   const nameEn = document.getElementById('adm_co_name_en').value.trim();
   const logo = document.getElementById('adm_co_logo').value.trim();
+  const introText = document.getElementById('adm_co_intro_text').value.trim();
+  const introImage = document.getElementById('adm_co_intro_image').value.trim();
   const status = document.getElementById('adm_co_status').value;
   if (!name){ alert('لازم تكتب اسم الشركة'); return; }
   try {
     await db.collection('companies').doc(name).set({
-      name, nameEn: nameEn || '', logo: logo || ''
+      name, nameEn: nameEn || '', logo: logo || '', introText: introText || '', introImage: introImage || ''
     });
     await db.collection('sectionStatus').doc(name).set({ open: status === 'open' }, { merge: true });
     // تحقق فوري: نجيب المستند مرة ثانية من السيرفر (بدون كاش) نتأكد إنه فعلاً محفوظ صح وبيظهر
@@ -5472,6 +5507,9 @@ async function addAdminCompany(){
     document.getElementById('adm_co_name_en').value = '';
     document.getElementById('adm_co_logo').value = '';
     document.getElementById('adm_co_logo_preview').innerHTML = '';
+    document.getElementById('adm_co_intro_text').value = '';
+    document.getElementById('adm_co_intro_image').value = '';
+    document.getElementById('adm_co_intro_image_preview').innerHTML = '';
   } catch(e){
     alert('صار خطأ بالإضافة: ' + e.message);
   }
@@ -6143,6 +6181,17 @@ function renderItemsView(){
 
   // بطاقة تعريف الشركة (NTDCO / صناع السعادة) صارت تنعرض فوق بمكان شريط المؤسسة (brandProfileSlot)، مو هون
   let companyIntroHtml = '';
+  // لأي شركة عادية (مش من الشركات الكبيرة اللي إلها بطاقة خاصة) مضاف إلها نص/صورة هوية تعريفية من لوحة التحكم
+  if (isBrandCat && !subBrandKey && !searchQuery){
+    const coInfo = (window.DYNAMIC_COMPANIES || {})[brandName];
+    if (coInfo && (coInfo.introText || coInfo.introImage)){
+      companyIntroHtml = `
+        <div style="grid-column: 1 / -1; background:#fff; border-radius:16px; overflow:hidden; border:1px solid var(--line); box-shadow:0 2px 8px rgba(16,25,58,0.04); margin-bottom:4px;">
+          ${coInfo.introImage ? `<img src="${coInfo.introImage}" style="width:100%; display:block;">` : ''}
+          ${coInfo.introText ? `<div style="padding:12px 14px; font-size:13px; line-height:1.8; color:var(--ink); white-space:pre-wrap;">${coInfo.introText}</div>` : ''}
+        </div>`;
+    }
+  }
 
   // بطاقات الأقسام الفرعية (مثلاً Coffee Break داخل الشركة الوطنية) تظهر فقط أول ما تفوت عالشركة، قبل اختيار قسم فرعي
   let subBrandCardsHtml = '';
