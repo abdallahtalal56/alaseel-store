@@ -266,6 +266,19 @@
   .ad-banner-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; }
   .ad-banner-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s; }
   .ad-banner-dot.active{ background:var(--gold); width:16px; border-radius:5px; }
+
+  /* لوحة إعلانات ذكية خاصة بقسم المفرق/المستهلك بس — بتحل محل شريط الترحيب وشريط الـ GPS */
+  .retail-ad-banner-slot{ padding:14px 14px 16px; }
+  .retail-ad-viewport{ position:relative; width:100%; aspect-ratio:16/11; border-radius:18px; overflow:hidden; box-shadow:0 8px 22px rgba(16,25,58,0.18); background:linear-gradient(135deg,#336781,#2A5670); }
+  .retail-ad-slide{ position:absolute; inset:0; display:flex; align-items:flex-end; opacity:0; transition:opacity .6s ease; cursor:pointer; text-decoration:none; }
+  .retail-ad-slide.active{ opacity:1; }
+  .retail-ad-slide img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
+  .retail-ad-slide-overlay{ position:relative; z-index:2; width:100%; background:linear-gradient(0deg, rgba(0,0,0,0.78), rgba(0,0,0,0.05)); padding:18px 14px 14px; display:flex; justify-content:space-between; align-items:flex-end; gap:10px; }
+  .retail-ad-slide-title{ color:#fff; font-weight:900; font-size:16px; line-height:1.3; }
+  .retail-ad-slide-price{ background:var(--red); color:#fff; font-weight:900; font-size:14px; padding:7px 14px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+  .retail-ad-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; }
+  .retail-ad-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s; }
+  .retail-ad-dot.active{ background:var(--gold); width:16px; border-radius:5px; }
   @keyframes companyMarqueeScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
   .company-intro{ grid-column:1/-1; background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px 16px; margin-bottom:14px; text-align:center; box-shadow:0 4px 12px rgba(16,25,58,0.06); }
   .company-intro-logo{ width:78px; height:78px; border-radius:50%; margin:0 auto 10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); overflow:hidden; }
@@ -311,6 +324,22 @@
   .qty-control{ display:none; align-items:center; gap:6px; background:var(--green); border-radius:15px; padding:3px 5px;}
   .qty-control button{ width:22px; height:22px; border:none; background:rgba(255,255,255,0.2); color:#fff; border-radius:50%; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .qty-control span{ color:#fff; font-weight:700; font-size:12px; min-width:14px; text-align:center;}
+
+  /* بطاقة عروض قسم المفرق/المستهلك فقط — صورة كاملة الحجم، صندوق تفاصيل، وسعر تحته */
+  .offer-card{ grid-column: 1 / -1; background:#fff; border-radius:16px; padding:0; border:1px solid var(--line); box-shadow:0 2px 8px rgba(16,25,58,0.04); overflow:hidden; position:relative; }
+  .offer-img{ width:100%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:48px; }
+  .offer-img img{ width:100%; height:auto; display:block; }
+  .offer-body{ padding:12px 14px 14px; }
+  .offer-name{ font-size:14.5px; font-weight:800; color:var(--ink); margin-bottom:8px; line-height:1.35; }
+  .offer-desc-box{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--gray); line-height:1.7; white-space:pre-wrap; margin-bottom:12px; background:var(--cream); }
+  .offer-bottom{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .offer-list-card{ grid-column: 1 / -1; display:flex; align-items:center; gap:12px; background:#fff; border-radius:14px; padding:10px; border:1px solid var(--line); box-shadow:0 2px 8px rgba(16,25,58,0.04); cursor:pointer; position:relative; }
+  .offer-list-img{ width:76px; height:76px; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:28px; }
+  .offer-list-img img{ width:100%; height:100%; object-fit:cover; }
+  .offer-list-info{ flex:1; min-width:0; }
+  .offer-list-name{ font-size:13.5px; font-weight:800; color:var(--ink); line-height:1.35; margin-bottom:5px; }
+  .offer-list-price{ font-size:13px; font-weight:900; color:var(--red); }
+  .offer-list-arrow{ color:var(--gray); font-size:18px; flex-shrink:0; }
 
   /* CART FLOATING BAR */
   .cart-float{
@@ -698,6 +727,11 @@
       <button class="loc-banner-btn" id="locBtn" onclick="requestLocation()">تحديد الآن</button>
     </div>
 
+    <div id="retailAdBannerSlot" class="retail-ad-banner-slot" style="display:none;">
+      <div class="retail-ad-viewport" id="retailAdViewport"></div>
+      <div class="retail-ad-dots" id="retailAdDots"></div>
+    </div>
+
     <div id="brandProfileSlot" style="display:none; padding:14px 14px 0;"></div>
 
     <div id="companyMarqueeSlot" class="company-marquee" style="display:none;">
@@ -983,9 +1017,38 @@ async function handleSetCompanyCode(){
 
 // رفع صورة من الموبايل عبر ImgBB (بديل مجاني عن Firebase Storage)، وترجيع رابطها
 const IMGBB_API_KEY = "5a9574bb7a2e1a6565dc9d64e83f207e";
-async function uploadImageFile(file){
+
+// نصغّر صورة الموبايل (غالباً كبيرة جداً بحجمها الأصلي) قبل الرفع، عشان نقلل احتمال فشل الرفع ونسرّعه
+function resizeImageForUpload(file, maxDim = 1280, quality = 0.82){
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = () => resolve(file); // فشل القراءة؟ منرفع الصورة الأصلية بدل ما نوقف كلياً
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim){
+            if (width >= height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+        } catch(e){ resolve(file); }
+      };
+      img.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    } catch(e){ resolve(file); }
+  });
+}
+
+async function uploadImageOnce(fileOrBlob){
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', fileOrBlob, 'photo.jpg');
   const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
     method: 'POST',
     body: formData
@@ -993,6 +1056,20 @@ async function uploadImageFile(file){
   const data = await res.json();
   if (!data.success) throw new Error(data.error?.message || 'فشل الرفع لـ ImgBB');
   return data.data.url;
+}
+
+async function uploadImageFile(file){
+  const resized = await resizeImageForUpload(file);
+  try {
+    return await uploadImageOnce(resized);
+  } catch(e){
+    // محاولة تانية تلقائية (أخطاء الرفع من الموبايل غالباً مؤقتة بسبب الشبكة)
+    try {
+      return await uploadImageOnce(resized);
+    } catch(e2){
+      throw e2;
+    }
+  }
 }
 function wireImageFileInput(inputId, targetHiddenId, previewId){
   const input = document.getElementById(inputId);
@@ -1261,6 +1338,8 @@ const DAIRY_SUBCATS = [
   { key: "jameed", name: "الجميد" }
 ];
 let activeSub = "all";
+// أي عرض بقسم المفرق مفتوح حالياً بشاشة التفاصيل (null = عم نعرض قائمة العروض الأفقية)
+let activeOfferId = null;
 const RETAIL_CATS_ORDER = [
   "basmati_rice", "medium_rice", "pasta", "instant_noodles", "sugar", "salt", "baking_canned_fruits", "legumes_spices", "dairy_cheese", "oil_ghee",
   "sweets_snacks", "tea_coffee", "tomato_paste", "sauces_condiments", "tahini_jam", "juices_drinks",
@@ -1745,6 +1824,7 @@ function getWholesaleBrandCats(){
   const counts = {};
   const sampleImg = {};
   PRODUCTS_DATA.forEach(p => {
+    if (p.__isOffer) return; // عروض المفرق مش جزء من تصنيف شركات الجملة خالص
     const b = getBrand(p.name);
     counts[b] = (counts[b] || 0) + 1;
     if (!sampleImg[b] && p.image) sampleImg[b] = p.image;
@@ -2553,6 +2633,50 @@ db.collection('sectionStatus').onSnapshot(snap => {
   if (typeof renderApp === 'function') renderApp();
 });
 
+// ===== عروض قسم المفرق/المستهلك: كل عرض بينضاف كصنف مصغّر جوا PRODUCTS_DATA نفسها =====
+// (هيك السلة والدفع وحساب الفاتورة بتشتغل معه تلقائياً بدون أي تعديل إضافي، بالضبط متل أي صنف عادي)
+window.DYNAMIC_OFFERS = {};
+function applyOfferToProducts(offerDocId, data, removed){
+  const idx = PRODUCTS_DATA.findIndex(p => p.__isOffer && p.__offerDocId === offerDocId);
+  if (removed){
+    if (idx !== -1) PRODUCTS_DATA.splice(idx, 1);
+    delete window.DYNAMIC_OFFERS[offerDocId];
+    return;
+  }
+  window.DYNAMIC_OFFERS[offerDocId] = data;
+  const offerProduct = {
+    id: data.numericId,
+    name: data.title || 'عرض',
+    description: data.description || '',
+    unit: '',
+    category: '__retail_offer__',
+    priceRetail: data.price || 0,
+    priceWholesale: data.price || 0,
+    image: data.image || '',
+    order: data.order !== undefined ? data.order : 0,
+    outOfStock: !!data.outOfStock,
+    __isOffer: true,
+    __offerDocId: offerDocId
+  };
+  if (idx !== -1) PRODUCTS_DATA[idx] = offerProduct; else PRODUCTS_DATA.push(offerProduct);
+}
+db.collection('offers').onSnapshot(snap => {
+  snap.docChanges().forEach(ch => {
+    if (ch.type === 'removed') applyOfferToProducts(ch.doc.id, null, true);
+    else applyOfferToProducts(ch.doc.id, ch.doc.data(), false);
+  });
+  if (typeof renderApp === 'function') renderApp();
+  if (typeof renderOffersListBox === 'function' && document.getElementById('offersListBox')) renderOffersListBox();
+});
+
+// ===== لوحة الإعلانات الذكية بقسم المفرق: مجرد اختيار العرض، والباقي (صورة/اسم/سعر) بيتولّد تلقائياً منه =====
+window.RETAIL_FEATURED_OFFERS = []; // كل عنصر: { docId, offerNumericId, order }
+db.collection('retailFeaturedOffers').orderBy('order', 'asc').onSnapshot(snap => {
+  window.RETAIL_FEATURED_OFFERS = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+  if (document.getElementById('retailAdViewport')) renderRetailAdBanner();
+  if (typeof renderRetailFeaturedListBox === 'function' && document.getElementById('retailFeaturedListBox')) renderRetailFeaturedListBox();
+});
+
 let wholesaleUnlocked = false; 
 let viewLevel = 'categories'; 
 let activeCat = null; 
@@ -2650,13 +2774,24 @@ function renderApp(){
       // أثناء أي بحث (سواء جوا شركة معينة أو بشكل عام)، منخفي شريط الترحيب وشريط الموقع لأنهم مش مكانهم بشاشة نتائج بحث
       heroSection.style.display = 'none';
       locBanner.style.display = 'none';
+      document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
       companyMarqueeSlot.style.display = 'none';
       document.getElementById('adBannerSlot').style.display = 'none';
     } else {
-      heroSection.style.display = '';
-      locBanner.style.display = '';
+      if (wholesaleUnlocked){
+        // بالجملة السلوك القديم زي ما هو تماماً (نظرياً هالفرع ما بينوصله وضع الجملة أصلاً، بس منحافظ عليه احتياطاً)
+        heroSection.style.display = '';
+        locBanner.style.display = '';
+        document.getElementById('retailAdBannerSlot').style.display = 'none';
+      } else {
+        // بقسم المفرق/المستهلك: نخفي شريط الترحيب وشريط الـ GPS ونحط اللوحة الذكية الكبيرة بدالهم
+        heroSection.style.display = 'none';
+        locBanner.style.display = 'none';
+        document.getElementById('retailAdBannerSlot').style.display = 'block';
+        renderRetailAdBanner();
+      }
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
       companyMarqueeSlot.style.display = 'none';
@@ -2711,6 +2846,23 @@ function handleBackButton(){
       renderApp();
       return;
     }
+    if (activeCat === '__retail_offers__'){
+      if (activeOfferId){
+        // رجوع من تفاصيل عرض معيّن بيرجعنا لقائمة العروض، مش للشاشة الرئيسية على طول
+        activeOfferId = null;
+        pushNavState();
+        renderApp();
+        return;
+      }
+      // شاشة العروض هي أعلى شاشة بقسم المفرق (محل شاشة الأقسام القديمة)، فبالرجوع منها نطلع للشاشة الرئيسية
+      appMode = 'select';
+      wholesaleUnlocked = false;
+      cart = {};
+      saveCartToStorage();
+      pushNavState();
+      renderApp();
+      return;
+    }
     viewLevel = 'categories';
     searchQuery = '';
     document.getElementById('searchInput').value = '';
@@ -2728,16 +2880,17 @@ function handleBackButton(){
 document.getElementById('backBtn').onclick = handleBackButton;
 
 function pushNavState(){
-  history.pushState({ appMode, wholesaleUnlocked, viewLevel, activeCat }, '');
+  history.pushState({ appMode, wholesaleUnlocked, viewLevel, activeCat, activeOfferId }, '');
 }
 window.addEventListener('popstate', (e) => {
   if (e.state){
     appMode = e.state.appMode; wholesaleUnlocked = e.state.wholesaleUnlocked;
     viewLevel = e.state.viewLevel; activeCat = e.state.activeCat;
+    activeOfferId = e.state.activeOfferId !== undefined ? e.state.activeOfferId : null;
     renderApp();
   }
 });
-history.replaceState({ appMode:'select', wholesaleUnlocked:false, viewLevel:'categories', activeCat:null }, '');
+history.replaceState({ appMode:'select', wholesaleUnlocked:false, viewLevel:'categories', activeCat:null, activeOfferId:null }, '');
 
 // MODE CONTROLS
 function handleRetailLockedClick(){
@@ -2749,8 +2902,14 @@ function handleWholesaleLockedClick(){
   alert('قسم الجملة متوقف حاليًا لأنه تحت المعالجة والتطوير. تابعونا قريبًا 🙏');
 }
 function enterRetailMode(){
-  appMode = 'store'; wholesaleUnlocked = false; viewLevel = 'categories';
+  appMode = 'store'; wholesaleUnlocked = false; viewLevel = 'items'; activeCat = '__retail_offers__'; searchQuery = ''; activeSub = 'all'; activeOfferId = null;
   pushNavState(); renderApp(); loadCachedInfo();
+}
+// فتح تفاصيل عرض معيّن من قائمة العروض الأفقية بقسم المفرق
+function openOfferDetail(id){
+  activeOfferId = id;
+  pushNavState();
+  renderApp();
 }
 function enterWholesaleMode(){
   // القفل عن الجملة ملغى مؤقتاً: دخول مباشر بدون طلب PIN
@@ -3373,7 +3532,12 @@ function renderAdminProductList(){
       <div style="margin-top:12px;">
       <input id="adm_slide_title" placeholder="عنوان الشريحة" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <input id="adm_slide_sub" placeholder="النص الفرعي" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
-      <input id="adm_slide_link" placeholder="رابط عند الضغط (اختياري، افتراضي واتساب)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">🏢 اختاري الشركة (لو محددة، الإعلان بيوجّه تلقائياً لصفحتها — ما في داعي لأي رابط يدوي)</label>
+      <select id="adm_slide_company" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+        <option value="">-- بدون شركة (استخدمي رابط يدوي تحت لو بدك) --</option>
+        ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
+      </select>
+      <input id="adm_slide_link" placeholder="رابط عند الضغط (اختياري، اتركيه فاضي لو اخترتي شركة فوق)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <input id="adm_slide_image" type="hidden" value="">
       <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">📷 صورة الشريحة (اختياري)</label>
       <input id="adm_slide_image_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
@@ -3381,6 +3545,41 @@ function renderAdminProductList(){
       <button onclick="addAdBannerSlide()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:14px;">➕ إضافة شريحة</button>
       <div style="color:#ccc; font-size:12px; margin-bottom:8px;">الشرائح الحالية:</div>
       <div id="adSlidesListBox"></div>
+      </div>
+    </details>
+
+    <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px;">
+      <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">🎁 إدارة العروض (قسم المفرق/المستهلك)</summary>
+      <div style="margin-top:12px;">
+      <div style="color:#ccc; font-size:11px; margin-bottom:8px;">قسم المفرق بيشتغل بس بالعروض اللي تضيفيها هون: صورة، تفاصيل، وسعر — وبيضاف تلقائياً لسلة الزبون تماماً متل أي صنف عادي.</div>
+      <input id="adm_offer_edit_id" type="hidden" value="">
+      <input id="adm_offer_title" placeholder="عنوان العرض" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <textarea id="adm_offer_desc" placeholder="تفاصيل العرض" rows="2" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px; resize:vertical;"></textarea>
+      <input id="adm_offer_price" type="number" step="0.01" placeholder="السعر (د.أ)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <input id="adm_offer_image" type="hidden" value="">
+      <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">📷 صورة العرض</label>
+      <input id="adm_offer_image_file" type="file" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:12px; margin-bottom:6px;">
+      <div id="adm_offer_image_preview" style="color:#aaa; font-size:12px; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button id="adm_offer_submit_btn" onclick="addOffer()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px;">➕ إضافة عرض</button>
+        <button id="adm_offer_cancel_btn" onclick="cancelEditOffer()" style="display:none; padding:10px 14px; border-radius:8px; border:none; background:#555; color:#fff; font-weight:800; font-size:13px;">إلغاء</button>
+      </div>
+      <div style="color:#ccc; font-size:12px; margin-bottom:8px;">العروض الحالية:</div>
+      <div id="offersListBox"></div>
+      </div>
+    </details>
+
+    <details style="background:#336781; border-radius:12px; padding:14px; margin-bottom:14px;">
+      <summary style="color:var(--gold); font-weight:800; font-size:14px; cursor:pointer;">🤖 لوحة إعلانات ذكية (قسم المفرق/المستهلك)</summary>
+      <div style="margin-top:12px;">
+      <div style="color:#ccc; font-size:11px; margin-bottom:8px;">هاي لوحة كبيرة بتحل محل شريط الترحيب فوق شاشة المفرق. بس اختاري عرض من عروضك، والباقي (الصورة، الاسم، السعر) بيتولّد تلقائياً منه بدون أي إدخال يدوي.</div>
+      <select id="adm_retail_ad_offer" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+        <option value="">-- اختاري عرض --</option>
+        ${Object.values(window.DYNAMIC_OFFERS || {}).map(o => `<option value="${o.numericId}">${(o.title || '').replace(/"/g,'&quot;')}</option>`).join('')}
+      </select>
+      <button onclick="addRetailFeaturedOffer()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:14px;">🤖 أضيفيه للوحة تلقائياً</button>
+      <div style="color:#ccc; font-size:12px; margin-bottom:8px;">العروض المعروضة حالياً باللوحة:</div>
+      <div id="retailFeaturedListBox"></div>
       </div>
     </details>
 
@@ -3399,11 +3598,14 @@ function renderAdminProductList(){
   wireImageFileInput('adm_edit_sub_logo_file', 'adm_edit_sub_logo', 'adm_edit_sub_logo_preview');
   wireImageFileInput('adm_newss_logo_file', 'adm_newss_logo', 'adm_newss_logo_preview');
   wireImageFileInput('adm_slide_image_file', 'adm_slide_image', 'adm_slide_image_preview');
+  wireImageFileInput('adm_offer_image_file', 'adm_offer_image', 'adm_offer_image_preview');
   updateAdmNewSubOptions();
   updateAdmEditSubSelectOptions();
   updateAdmNewSubSectionOptions();
   renderPendingChangesList();
   renderAdSlidesListBox();
+  renderOffersListBox();
+  renderRetailFeaturedListBox();
   showAnalyticsTab(_analyticsTab);
 }
 
@@ -4384,9 +4586,13 @@ function exportReportCSV(type){
 async function addAdBannerSlide(){
   const title = document.getElementById('adm_slide_title').value.trim();
   const sub = document.getElementById('adm_slide_sub').value.trim();
-  const link = document.getElementById('adm_slide_link').value.trim();
+  const company = document.getElementById('adm_slide_company').value;
+  const manualLink = document.getElementById('adm_slide_link').value.trim();
   const image = document.getElementById('adm_slide_image').value.trim();
   if (!title){ alert('لازم تكتب عنوان للشريحة'); return; }
+  // لو اتخارت شركة، منولّد رابطها تلقائياً (بيوجّه الزبون مباشرة لصفحتها بدون أي رابط يدوي)
+  const companyLink = company ? `${location.origin}${location.pathname}#${encodeURIComponent('brand::' + company)}` : '';
+  const link = companyLink || manualLink;
   try {
     await db.collection('adBanners').add({
       title, sub, image: image || '',
@@ -4396,6 +4602,7 @@ async function addAdBannerSlide(){
     alert('انضافت الشريحة بنجاح ✅');
     document.getElementById('adm_slide_title').value = '';
     document.getElementById('adm_slide_sub').value = '';
+    document.getElementById('adm_slide_company').value = '';
     document.getElementById('adm_slide_link').value = '';
     document.getElementById('adm_slide_image').value = '';
     document.getElementById('adm_slide_image_preview').innerHTML = '';
@@ -4425,6 +4632,92 @@ function renderAdSlidesListBox(){
         <div style="color:#999; font-size:11px;">${s.sub || ''}</div>
       </div>
       <button onclick="deleteAdBannerSlide('${s.id}')" style="background:#b33; color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:11px;">🗑️ حذف</button>
+    </div>
+  `).join('');
+}
+
+// ============ إدارة عروض قسم المفرق/المستهلك ============
+async function addOffer(){
+  const editId = document.getElementById('adm_offer_edit_id').value.trim();
+  const title = document.getElementById('adm_offer_title').value.trim();
+  const description = document.getElementById('adm_offer_desc').value.trim();
+  const price = parseFloat(document.getElementById('adm_offer_price').value) || 0;
+  const image = document.getElementById('adm_offer_image').value.trim();
+  if (!title){ alert('لازم تكتبي عنوان للعرض'); return; }
+  try {
+    if (editId){
+      // وضع التعديل: منحدّث نفس العرض الموجود بدل ما ننشئ وحدة جديدة
+      await db.collection('offers').doc(editId).set({
+        title, description, price, image: image || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      alert('انحفظ تعديل العرض بنجاح ✅');
+    } else {
+      await db.collection('offers').add({
+        title, description, price, image: image || '',
+        numericId: Date.now(),
+        order: Date.now(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert('انضاف العرض بنجاح ✅');
+    }
+    cancelEditOffer();
+  } catch(e){
+    alert('صار خطأ بالحفظ: ' + e.message);
+  }
+}
+
+// تعبئة الفورم ببيانات عرض موجود عشان نعدّل عليه (بدل ما ننشئ عرض جديد)
+function editOffer(offerDocId){
+  const o = (window.DYNAMIC_OFFERS || {})[offerDocId];
+  if (!o) return;
+  document.getElementById('adm_offer_edit_id').value = offerDocId;
+  document.getElementById('adm_offer_title').value = o.title || '';
+  document.getElementById('adm_offer_desc').value = o.description || '';
+  document.getElementById('adm_offer_price').value = o.price || '';
+  document.getElementById('adm_offer_image').value = o.image || '';
+  document.getElementById('adm_offer_image_preview').innerHTML = o.image ? `<img src="${o.image}" style="max-width:100%; border-radius:8px;">` : '';
+  document.getElementById('adm_offer_submit_btn').textContent = '💾 حفظ التعديل';
+  document.getElementById('adm_offer_cancel_btn').style.display = 'inline-block';
+  document.getElementById('adm_offer_title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// إلغاء وضع التعديل والرجوع لوضع "إضافة عرض جديد"
+function cancelEditOffer(){
+  document.getElementById('adm_offer_edit_id').value = '';
+  document.getElementById('adm_offer_title').value = '';
+  document.getElementById('adm_offer_desc').value = '';
+  document.getElementById('adm_offer_price').value = '';
+  document.getElementById('adm_offer_image').value = '';
+  document.getElementById('adm_offer_image_preview').innerHTML = '';
+  document.getElementById('adm_offer_submit_btn').textContent = '➕ إضافة عرض';
+  document.getElementById('adm_offer_cancel_btn').style.display = 'none';
+}
+
+async function deleteOffer(offerDocId){
+  if (!confirm('متأكدة بدك تحذفي هالعرض؟')) return;
+  try { await db.collection('offers').doc(offerDocId).delete(); }
+  catch(e){ alert('صار خطأ: ' + e.message); }
+}
+
+function renderOffersListBox(){
+  const box = document.getElementById('offersListBox');
+  if (!box) return;
+  const offers = Object.keys(window.DYNAMIC_OFFERS || {}).map(docId => ({ docId, ...window.DYNAMIC_OFFERS[docId] }));
+  if (!offers.length){
+    box.innerHTML = `<div style="color:#999; font-size:12px; text-align:center;">ما في عروض مضافة لسا</div>`;
+    return;
+  }
+  box.innerHTML = offers.map(o => `
+    <div style="background:#2A5670; border-radius:8px; padding:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <div style="min-width:0;">
+        <div style="color:#fff; font-size:12px; font-weight:700;">${o.title || ''}</div>
+        <div style="color:#999; font-size:11px;">${o.description || ''} — ${(o.price || 0).toFixed(2)} د.أ</div>
+      </div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button onclick="editOffer('${o.docId}')" style="background:var(--gold); color:#2A5670; border:none; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:800;">✏️ تعديل</button>
+        <button onclick="deleteOffer('${o.docId}')" style="background:#b33; color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:11px;">🗑️ حذف</button>
+      </div>
     </div>
   `).join('');
 }
@@ -5250,6 +5543,84 @@ function goToAdBanner(i){
   document.querySelectorAll('.ad-banner-dot').forEach((el, idx) => el.classList.toggle('active', idx === i));
 }
 
+// اللوحة الذكية بقسم المفرق: بتبني نفسها تلقائياً من بيانات العرض المختار (صورة/اسم/سعر) بدون أي إدخال يدوي إضافي
+let _retailAdIndex = 0;
+let _retailAdTimer = null;
+function renderRetailAdBanner(){
+  const viewport = document.getElementById('retailAdViewport');
+  const dotsWrap = document.getElementById('retailAdDots');
+  if (!viewport || !dotsWrap) return;
+  const featured = (window.RETAIL_FEATURED_OFFERS || [])
+    .map(f => PRODUCTS_DATA.find(p => p.__isOffer && p.id === f.offerNumericId))
+    .filter(Boolean);
+  if (!featured.length){ viewport.innerHTML = ''; dotsWrap.innerHTML = ''; if (_retailAdTimer) clearInterval(_retailAdTimer); return; }
+
+  viewport.innerHTML = featured.map((p, i) => `
+    <div class="retail-ad-slide${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="openOfferDetail(${p.id})">
+      ${p.image ? `<img src="${p.image}">` : ''}
+      <div class="retail-ad-slide-overlay">
+        <div class="retail-ad-slide-title">${p.name}</div>
+        <div class="retail-ad-slide-price">${p.priceRetail > 0 ? p.priceRetail.toFixed(2) + ' د.أ' : 'السعر لاحقاً'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  dotsWrap.innerHTML = featured.length > 1 ? featured.map((_, i) => `
+    <div class="retail-ad-dot${i === 0 ? ' active' : ''}" onclick="event.stopPropagation(); goToRetailAdBanner(${i})"></div>
+  `).join('') : '';
+
+  _retailAdIndex = 0;
+  if (_retailAdTimer) clearInterval(_retailAdTimer);
+  if (featured.length > 1){
+    _retailAdTimer = setInterval(() => {
+      goToRetailAdBanner((_retailAdIndex + 1) % featured.length);
+    }, 4000);
+  }
+}
+function goToRetailAdBanner(i){
+  _retailAdIndex = i;
+  document.querySelectorAll('.retail-ad-slide').forEach(el => el.classList.toggle('active', Number(el.dataset.idx) === i));
+  document.querySelectorAll('.retail-ad-dot').forEach((el, idx) => el.classList.toggle('active', idx === i));
+}
+
+// إدارة اللوحة الذكية من لوحة التحكم: بس اختاري العرض وبتنضاف تلقائياً
+async function addRetailFeaturedOffer(){
+  const select = document.getElementById('adm_retail_ad_offer');
+  const offerNumericId = parseInt(select.value, 10);
+  if (!offerNumericId){ alert('لازم تختاري عرض'); return; }
+  if ((window.RETAIL_FEATURED_OFFERS || []).some(f => f.offerNumericId === offerNumericId)){
+    alert('هالعرض مضاف باللوحة أصلاً'); return;
+  }
+  try {
+    await db.collection('retailFeaturedOffers').add({
+      offerNumericId,
+      order: Date.now(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e){ alert('صار خطأ: ' + e.message); }
+}
+async function removeRetailFeaturedOffer(docId){
+  try { await db.collection('retailFeaturedOffers').doc(docId).delete(); }
+  catch(e){ alert('صار خطأ: ' + e.message); }
+}
+function renderRetailFeaturedListBox(){
+  const box = document.getElementById('retailFeaturedListBox');
+  if (!box) return;
+  const list = window.RETAIL_FEATURED_OFFERS || [];
+  if (!list.length){
+    box.innerHTML = `<div style="color:#999; font-size:12px; text-align:center;">ما فيه عروض مضافة باللوحة لسا</div>`;
+    return;
+  }
+  box.innerHTML = list.map(f => {
+    const p = PRODUCTS_DATA.find(x => x.__isOffer && x.id === f.offerNumericId);
+    return `
+    <div style="background:#2A5670; border-radius:8px; padding:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="color:#fff; font-size:12px; font-weight:700;">${p ? p.name : '(عرض محذوف)'}</div>
+      <button onclick="removeRetailFeaturedOffer('${f.docId}')" style="background:#b33; color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:11px;">🗑️ إزالة</button>
+    </div>`;
+  }).join('');
+}
+
 function renderCompanyMarquee(){
   const track = document.getElementById('companyMarqueeTrack');
   const brandCats = getWholesaleBrandCats();
@@ -5614,6 +5985,92 @@ const RETAIL_HIDDEN_IDS = [550, 551, 552];
 
 function renderItemsView(){
   const target = document.getElementById('itemsGridContainer');
+
+  // قسم المفرق/المستهلك بيشتغل بطريقة "عروض" بس: قائمة أفقية بدون زر إضافة، وبالضغط على عرض بتفتح تفاصيله كاملة مع زر الإضافة
+  if (activeCat === '__retail_offers__'){
+    const ageNoticeEl = document.getElementById('ageRestrictedNotice');
+    if (ageNoticeEl) ageNoticeEl.style.display = 'none';
+    const subBar = document.getElementById('subcatBar');
+    if (subBar) subBar.style.display = 'none';
+    let offers = PRODUCTS_DATA.filter(p => p.__isOffer);
+    if (searchQuery) offers = offers.filter(p => p.name.includes(searchQuery));
+    offers = offers.map((p, idx) => ({ p, idx })).sort((a, b) => {
+      const oa = a.p.order !== undefined ? a.p.order : a.idx;
+      const ob = b.p.order !== undefined ? b.p.order : b.idx;
+      return oa - ob;
+    }).map(x => x.p);
+    window._currentItemsSubset = offers;
+
+    // شاشة تفاصيل عرض واحد (بعد الضغط عليه من القائمة)
+    const openOffer = activeOfferId ? offers.find(p => p.id === activeOfferId) : null;
+    if (openOffer){
+      document.getElementById('activeCatTitle').textContent = openOffer.name;
+      const activeCatCountEl = document.getElementById('activeCatCount');
+      activeCatCountEl.textContent = '';
+      activeCatCountEl.classList.remove('section-count-clickable');
+      activeCatCountEl.onclick = null;
+      const p = openOffer;
+      const qty = cart[p.id] || 0;
+      const imgHtml = p.image ? `<img src="${p.image}">` : '🎁';
+      const priceHtml = p.priceRetail > 0
+        ? `<div class="price-tag"><div class="price-num">${p.priceRetail.toFixed(2)}<span class="price-cur">د.أ</span></div></div>`
+        : `<div class="price-tag" style="background:linear-gradient(135deg,#8A8F9E,#6b707c);"><div class="price-num" style="font-size:10px;">السعر لاحقاً</div></div>`;
+      const outOfStockBadge = p.outOfStock ? `<div style="position:absolute; top:0; right:0; left:0; bottom:0; background:rgba(20,20,20,0.55); z-index:4; display:flex; align-items:center; justify-content:center;"><div style="background:#b33; color:#fff; font-weight:900; font-size:13px; padding:6px 16px; border-radius:20px; transform:rotate(-8deg); box-shadow:0 2px 8px rgba(0,0,0,0.4);">العرض انتهى</div></div>` : '';
+      target.innerHTML = `
+        <div class="offer-card">
+          ${(adminEditMode) ? `<button onclick="event.stopPropagation(); deleteOffer('${p.__offerDocId}')" style="position:absolute; top:6px; left:6px; z-index:5; background:#b33; color:#fff; border:none; border-radius:50%; width:28px; height:28px; font-size:14px; box-shadow:0 2px 6px rgba(0,0,0,0.3);">🗑️</button>` : ''}
+          <div class="offer-img">${imgHtml}</div>
+          <div class="offer-body">
+            <div class="offer-name">${p.name}</div>
+            ${p.description ? `<div class="offer-desc-box">${p.description}</div>` : ''}
+            <div class="offer-bottom">
+              ${priceHtml}
+              <button class="add-btn" id="add-btn-${p.id}" style="display:${(qty>0||p.outOfStock)?'none':'flex'};" onclick="changeQuantity(${p.id}, 1)">＋</button>
+              <div class="qty-control" id="qty-ctrl-${p.id}" style="display:${(qty>0&&!p.outOfStock)?'flex':'none'};">
+                <button onclick="changeQuantity(${p.id}, -1)">－</button>
+                <span id="qty-val-${p.id}">${qty}</span>
+                <button onclick="changeQuantity(${p.id}, 1)">＋</button>
+              </div>
+            </div>
+          </div>
+          ${outOfStockBadge}
+        </div>
+      `;
+      return;
+    }
+    if (activeOfferId){
+      // العرض المفتوح انحذف أو ما عاد موجود، نرجّع المستخدم لقائمة العروض تلقائياً
+      activeOfferId = null;
+    }
+
+    // قائمة العروض الأفقية (الشاشة الرئيسية لقسم المفرق)
+    document.getElementById('activeCatTitle').textContent = searchQuery ? `نتائج البحث عن: ${searchQuery}` : 'عروضنا المميزة 🎁';
+    const activeCatCountEl = document.getElementById('activeCatCount');
+    activeCatCountEl.textContent = `${offers.length} عرض`;
+    activeCatCountEl.classList.remove('section-count-clickable');
+    activeCatCountEl.onclick = null;
+    if (offers.length === 0){
+      target.innerHTML = `<div class="empty-msg">ترقّبوا عروضنا القريبة على المفرق قريباً... 🎁</div>`;
+      return;
+    }
+    target.innerHTML = offers.map(p => {
+      const imgHtml = p.image ? `<img src="${p.image}">` : '🎁';
+      const priceText = p.priceRetail > 0 ? `${p.priceRetail.toFixed(2)} د.أ` : 'السعر لاحقاً';
+      return `
+        <div class="offer-list-card" onclick="openOfferDetail(${p.id})">
+          ${(adminEditMode) ? `<button onclick="event.stopPropagation(); deleteOffer('${p.__offerDocId}')" style="position:absolute; top:6px; left:6px; z-index:5; background:#b33; color:#fff; border:none; border-radius:50%; width:24px; height:24px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,0.3);">🗑️</button>` : ''}
+          <div class="offer-list-img">${imgHtml}</div>
+          <div class="offer-list-info">
+            <div class="offer-list-name">${p.name}</div>
+            <div class="offer-list-price">${priceText}</div>
+          </div>
+          <div class="offer-list-arrow">‹</div>
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
   const isBrandCat = typeof activeCat === 'string' && activeCat.startsWith('brand::');
   const brandParts = isBrandCat ? activeCat.slice(7).split('::') : [];
   const brandName = isBrandCat ? brandParts[0] : null;
@@ -5621,6 +6078,7 @@ function renderItemsView(){
   const subSubKey = isBrandCat && brandParts[2] ? brandParts[2] : null;
 
   let subset = PRODUCTS_DATA.filter(p => {
+    if (p.__isOffer) return false; // عروض المفرق إلها شاشتها الخاصة فوق، ما بتظهر بأي قائمة عادية
     if (searchQuery) {
       if (!p.name.includes(searchQuery)) return false;
       // لو عم نبحث جوا صفحة شركة محددة، نحصر النتائج بأصناف هالشركة بس (مش كل الشركات سوا)
@@ -5819,7 +6277,7 @@ function handleSearch(val){
 window._uncategorizedStrays = null;
 function findUncategorizedProducts(){
   const displayedBrands = new Set(getWholesaleBrandCats().map(c => c.name));
-  const strays = PRODUCTS_DATA.filter(p => !displayedBrands.has(getBrand(p.name)));
+  const strays = PRODUCTS_DATA.filter(p => !p.__isOffer && !displayedBrands.has(getBrand(p.name)));
   window._uncategorizedStrays = strays;
   const searchBox = document.getElementById('uncategorizedSearchBox');
   const searchInput = document.getElementById('uncategorizedSearchInput');
