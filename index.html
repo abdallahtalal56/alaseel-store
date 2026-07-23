@@ -3689,6 +3689,8 @@ function renderAdminProductList(){
         <option value="">-- اختاري شركة --</option>
         ${getAllKnownCompanies().map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
       </select>
+      <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">🎬 رابط فيديو يوتيوب (اختياري — بدل الصورة الثابتة)</label>
+      <input id="adm_wh_ad_video" type="text" placeholder="الصقي رابط يوتيوب هون (اختياري)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <button onclick="addWholesaleFeaturedCompany()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:14px;">🤖 أضيفيها للوحة تلقائياً</button>
       <div style="color:#ccc; font-size:12px; margin-bottom:8px;">الشركات المعروضة حالياً باللوحة:</div>
       <div id="wholesaleFeaturedListBox"></div>
@@ -4754,20 +4756,31 @@ function exportReportCSV(type){
 }
 
 // ============ لوحة إعلانات ذكية (قسم الجملة): اختيار شركة بس، وكل شي تاني تلقائي ============
+// نطلع رقم فيديو اليوتيوب من أي شكل رابط (watch?v=, youtu.be/, shorts/)
+function extractYoutubeId(url){
+  if (!url) return '';
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+  return m ? m[1] : '';
+}
 async function addWholesaleFeaturedCompany(){
   const select = document.getElementById('adm_wh_ad_company');
   const company = select.value;
+  const videoUrl = document.getElementById('adm_wh_ad_video').value.trim();
+  const videoId = extractYoutubeId(videoUrl);
   if (!company){ alert('لازم تختاري شركة'); return; }
+  if (videoUrl && !videoId){ alert('رابط اليوتيوب مش واضح، تأكدي إنه رابط فيديو صحيح'); return; }
   if ((window.DYNAMIC_WHOLESALE_FEATURED || []).some(f => f.companyName === company)){
     alert('هاي الشركة مضافة باللوحة أصلاً'); return;
   }
   try {
     await db.collection('wholesaleFeaturedCompanies').add({
       companyName: company,
+      videoId: videoId || '',
       order: Date.now(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     select.value = '';
+    document.getElementById('adm_wh_ad_video').value = '';
   } catch(e){ alert('صار خطأ: ' + e.message); }
 }
 async function removeWholesaleFeaturedCompany(docId){
@@ -5820,6 +5833,7 @@ db.collection('wholesaleFeaturedCompanies').orderBy('order', 'asc').onSnapshot(s
       title: f.companyName,
       sub,
       image: co.introImage || co.logo || '',
+      videoId: f.videoId || '',
       link: `${location.origin}${location.pathname}#${encodeURIComponent('brand::' + f.companyName)}`
     };
   });
@@ -5850,9 +5864,14 @@ function renderAdBanner(){
       ? `onclick="event.preventDefault(); navigateToCategory('${internalKey.replace(/'/g,"\\'")}');"`
       : '';
     const hrefAttrs = isInternalLink ? `href="javascript:void(0)"` : `href="${ad.link}" target="_blank" rel="noopener"`;
+    // فيديو (لو موجود): بيشتغل بصمت وبتكرار تلقائي كخلفية متحركة بس، والضغط بأي مكان فوقه بيوديك للشركة
+    // (اليوتيوب ما بيسمح نتحكم بالصوت من برّا الفيديو، فخليناه دايماً بصمت بشكل مقصود، بالضبط متل إعلانات فيديو انستغرام)
+    const mediaHtml = ad.videoId
+      ? `<iframe src="https://www.youtube.com/embed/${ad.videoId}?autoplay=1&mute=1&loop=1&playlist=${ad.videoId}&controls=0&modestbranding=1&playsinline=1&rel=0" style="position:absolute; inset:0; width:100%; height:100%; border:none; pointer-events:none;" allow="autoplay; encrypted-media"></iframe>`
+      : (ad.image ? `<img src="${ad.image}">` : '');
     return `
     <a class="ad-banner-slide${i === 0 ? ' active' : ''}" data-idx="${i}" ${hrefAttrs} ${clickAttr}>
-      ${ad.image ? `<img src="${ad.image}">` : ''}
+      ${mediaHtml}
       <div class="ad-banner-slide-text">
         <div class="ad-banner-slide-title">${ad.title}</div>
         <div class="ad-banner-slide-sub">${ad.sub}</div>
