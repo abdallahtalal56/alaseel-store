@@ -6032,38 +6032,54 @@ function renderRetailFeaturedListBox(){
 }
 
 function renderCompanyMarquee(){
-  // منبني الشريط مرة وحدة بس بكل الجلسة، ومش بنلمسه تاني إطلاقاً — هيك حركته تضل مستمرة وما تنقطع أو "تختفي" مهما تحدثت بيانات تانية بالخلفية
-  if (window._marqueeBuiltOnce) return;
-  const track = document.getElementById('companyMarqueeTrack');
-  const brandCats = getWholesaleBrandCats();
-  if (!brandCats.length) return; // ما وصلت بيانات كافية لسا، منجرب تاني بالمرة الجاية
-  const chipHtml = (key, image, name, count, idx) => `
-    <div class="company-marquee-chip" style="animation-delay:${(idx % 8) * 0.35}s" onclick="navigateToCategory('${key}')">
-      <div class="company-marquee-ring"><img src="${image || ''}" loading="lazy"></div>
-      <div class="company-marquee-name">${name}</div>
-      <div class="company-marquee-count">${count} صنف</div>
-    </div>`;
-  // الشريط يعرض كل الشركات (مش بس اللي إلها أقسام فرعية)، بالإضافة لأي قسم فرعي داخلها، عشان يضل غني وما يوصل لفراغ
-  let allChips = [];
-  brandCats.forEach(info => {
-    const companyRawName = info.key.slice(7); // إزالة بادئة "brand::"
-    allChips.push({ key: info.key, image: info.image, name: info.name, count: info.count });
-    const subs = getSubBrandsForCompany(companyRawName);
-    if (subs.length) {
+  try {
+    const track = document.getElementById('companyMarqueeTrack');
+    if (!track) return;
+    const brandCats = getWholesaleBrandCats();
+    if (!brandCats.length){
+      // ما وصلت بيانات كافية لسا — منجرب تاني بعد نص ثانية بدل ما نستسلم ونخلي الشريط فاضي للأبد
+      setTimeout(() => { if (typeof renderCompanyMarquee === 'function') renderCompanyMarquee(); }, 500);
+      return;
+    }
+    const chipHtml = (key, image, name, count, idx) => `
+      <div class="company-marquee-chip" style="animation-delay:${(idx % 8) * 0.35}s" onclick="navigateToCategory('${key}')">
+        <div class="company-marquee-ring"><img src="${image || ''}" loading="lazy"></div>
+        <div class="company-marquee-name">${name}</div>
+        <div class="company-marquee-count">${count} صنف</div>
+      </div>`;
+    // الشريط يعرض كل الشركات (مش بس اللي إلها أقسام فرعية)، بالإضافة لأي قسم فرعي داخلها، عشان يضل غني وما يوصل لفراغ
+    let allChips = [];
+    brandCats.forEach(info => {
+      const companyRawName = info.key.slice(7); // إزالة بادئة "brand::"
+      allChips.push({ key: info.key, image: info.image, name: info.name, count: info.count });
+      let subs = [];
+      try { subs = getSubBrandsForCompany(companyRawName) || []; } catch(e){ subs = []; }
       subs.forEach(sb => {
-        const cnt = PRODUCTS_DATA.filter(p => getBrand(p.name) === companyRawName && getSubBrand(companyRawName, p) === sb.key).length;
+        let cnt = 0;
+        try { cnt = PRODUCTS_DATA.filter(p => getBrand(p.name) === companyRawName && getSubBrand(companyRawName, p) === sb.key).length; } catch(e){ cnt = 0; }
         allChips.push({ key: `brand::${companyRawName}::${sb.key}`, image: sb.logo, name: sb.name, count: cnt });
       });
+    });
+    if (!allChips.length){
+      track.innerHTML = '';
+      return;
     }
-  });
-  if (!allChips.length) return;
-  window._marqueeBuiltOnce = true;
-  const chipsHtml = allChips.map((c, idx) => chipHtml(c.key, c.image, c.name, c.count, idx)).join('');
-  // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop) بدون ما توصل لمرحلة فراغ أو وقفة
-  track.innerHTML = chipsHtml + chipsHtml;
-  // نضبط مدة الحركة حسب عدد العناصر حتى تضل السرعة ثابتة ومريحة مهما زاد عدد الأقسام
-  const speedPerChip = 1.6; // ثانية لكل عنصر تقريباً
-  track.style.animationDuration = Math.max(allChips.length * speedPerChip, 20) + 's';
+    // ما بنلمس الشريط إذا نفس المحتوى بالظبط (عشان ما نقطع حركته)، بس دايماً منتأكد إنه معبّى أول مرة
+    const signature = allChips.map(c => c.key).join('|');
+    if (signature === window._marqueeSignature && track.childElementCount > 0){
+      return;
+    }
+    window._marqueeSignature = signature;
+    const chipsHtml = allChips.map((c, idx) => chipHtml(c.key, c.image, c.name, c.count, idx)).join('');
+    // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop) بدون ما توصل لمرحلة فراغ أو وقفة
+    track.innerHTML = chipsHtml + chipsHtml;
+    // نضبط مدة الحركة حسب عدد العناصر حتى تضل السرعة ثابتة ومريحة مهما زاد عدد الأقسام
+    const speedPerChip = 1.6; // ثانية لكل عنصر تقريباً
+    track.style.animationDuration = Math.max(allChips.length * speedPerChip, 20) + 's';
+  } catch(e){
+    // أي خطأ غير متوقع، منحاول تاني بعد شوي بدل ما نخلي الشريط عالق فاضي للأبد
+    setTimeout(() => { if (typeof renderCompanyMarquee === 'function') renderCompanyMarquee(); }, 1000);
+  }
 }
 
 function renderCategoriesView(){
