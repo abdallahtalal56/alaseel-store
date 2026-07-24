@@ -6034,7 +6034,7 @@ function renderRetailFeaturedListBox(){
 function renderCompanyMarquee(){
   const track = document.getElementById('companyMarqueeTrack');
   const brandCats = getWholesaleBrandCats();
-  if (!brandCats.length){ track.innerHTML = ''; return; }
+  if (!brandCats.length){ track.innerHTML = ''; window._marqueeSignature = ''; return; }
   const chipHtml = (key, image, name, count, idx) => `
     <div class="company-marquee-chip" style="animation-delay:${(idx % 8) * 0.35}s" onclick="navigateToCategory('${key}')">
       <div class="company-marquee-ring"><img src="${image || ''}"></div>
@@ -6054,7 +6054,13 @@ function renderCompanyMarquee(){
       });
     }
   });
-  if (!allChips.length){ track.innerHTML = ''; return; }
+  if (!allChips.length){ track.innerHTML = ''; window._marqueeSignature = ''; return; }
+  // بصمة بسيطة (أسماء + مفاتيح بس، بدون العدد) عشان نعرف هل المحتوى تغيّر فعلاً ولا لأ — تغيّر العدد بس ما يستاهل نعيد بناء الشريط ونوقف حركته
+  const signature = allChips.map(c => c.key).join('|');
+  if (signature === window._marqueeSignature){
+    return; // نفس الشركات بالظبط، ما في داعي نلمس الشريط ونقطع حركته المستمرة
+  }
+  window._marqueeSignature = signature;
   const chipsHtml = allChips.map((c, idx) => chipHtml(c.key, c.image, c.name, c.count, idx)).join('');
   // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop) بدون ما توصل لمرحلة فراغ أو وقفة
   track.innerHTML = chipsHtml + chipsHtml;
@@ -7344,9 +7350,10 @@ function submitPhoneGate(){
 }
 
 function startApp(){
-  // نسخة "الجملة فقط": ندخل مباشرة على وضع الجملة بدون ما نعرض شاشة اختيار جملة/مفرق أصلاً
-  enterWholesaleModeGated();
+  renderApp();
   loadPopularProducts();
+  // نحدّث فوراً حالة قفل قسم الجملة بعد التسجيل مباشرة، بدل ما ننتظر أول تحديث لاحق من قاعدة البيانات
+  if (typeof applyGlobalSettingsToModeCards === 'function') applyGlobalSettingsToModeCards();
 }
 
 const _existingVisitorPhone = localStorage.getItem('alaseel_visitor_phone');
