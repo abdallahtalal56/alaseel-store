@@ -213,16 +213,16 @@
   .search-box input{ border:none; outline:none; background:transparent; font-family:'Tajawal'; font-weight:500; font-size:16px; flex:1; color:var(--ink); }
 
   /* CATEGORIES FULL GRID VIEW */
-  .main-cat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:10px 14px 120px; }
+  .main-cat-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:10px 14px 120px; }
   .cat-box{
-    background:#fff; border:1px solid var(--line); border-radius:18px; padding:16px 12px;
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:12px 8px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; cursor:pointer; transition:0.2s; box-shadow:0 3px 8px rgba(0,0,0,0.02);
   }
   .cat-box:active{ transform:scale(0.96); background:#FDFCF7;}
   .cat-box-icon{
-    width:54px; height:54px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; border:1px solid rgba(201,162,39,0.15); overflow:hidden;
+    width:44px; height:44px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:8px; border:1px solid rgba(201,162,39,0.15); overflow:hidden;
   }
-  .cat-box-name{ font-size:12.5px; font-weight:800; color:var(--ink); line-height:1.35; min-height:34px; display:flex; align-items:center; justify-content:center;}
+  .cat-box-name{ font-size:11px; font-weight:800; color:var(--ink); line-height:1.3; min-height:30px; display:flex; align-items:center; justify-content:center;}
   .verified-badge{ display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; min-width:14px; border-radius:50%; background:#1DA1F2; color:#fff; font-size:9px; margin-inline-start:3px; line-height:1; }
 
   /* ITEMS SECTION TITLE */
@@ -547,7 +547,23 @@
         <div class="brand-mark" id="topbarBrandMark"><img id="topbarLogoImg" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none;"><span id="topbarLogoFallback">🦅</span></div>
         <div class="brand-mini-text">الأصيل للتوزيعات الغذائية</div>
       </div>
-      <button class="icon-btn" id="backBtn" style="visibility:hidden;">➔</button>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button class="icon-btn" id="backBtn" style="visibility:hidden;">➔</button>
+        <button class="icon-btn" id="hamburgerBtn" onclick="openSideMenu()">☰</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sideMenuOverlay" onclick="if(event.target===this) closeSideMenu();" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:18000;">
+    <div id="sideMenuDrawer" style="position:absolute; top:0; right:0; bottom:0; width:78%; max-width:300px; background:#2A5670; box-shadow:-4px 0 20px rgba(0,0,0,0.3); padding:20px 16px; display:flex; flex-direction:column; direction:rtl; transform:translateX(100%); transition:transform .28s ease;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;">
+        <div style="color:var(--gold); font-weight:900; font-size:16px;">القائمة</div>
+        <button onclick="closeSideMenu()" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer;">×</button>
+      </div>
+      <button onclick="closeSideMenu(); goHomeFromSideMenu();" style="text-align:right; background:none; border:none; border-bottom:1px solid #3a5a6e; color:#fff; font-size:15px; font-weight:700; padding:14px 4px; cursor:pointer; display:flex; align-items:center; gap:10px;">🏠 الرئيسية</button>
+      <button onclick="closeSideMenu(); if(typeof toggleCartDrawer==='function') toggleCartDrawer(true);" style="text-align:right; background:none; border:none; border-bottom:1px solid #3a5a6e; color:#fff; font-size:15px; font-weight:700; padding:14px 4px; cursor:pointer; display:flex; align-items:center; gap:10px;">🛒 سلتي</button>
+      <a href="#" id="sideMenuWhatsapp" target="_blank" onclick="closeSideMenu()" style="text-align:right; background:none; border:none; border-bottom:1px solid #3a5a6e; color:#fff; font-size:15px; font-weight:700; padding:14px 4px; cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">💬 تواصل معنا</a>
+      <button onclick="closeSideMenu(); showAboutAppModal();" style="text-align:right; background:none; border:none; border-bottom:1px solid #3a5a6e; color:#fff; font-size:15px; font-weight:700; padding:14px 4px; cursor:pointer; display:flex; align-items:center; gap:10px;">ℹ️ عن التطبيق</button>
     </div>
   </div>
 
@@ -756,14 +772,14 @@
 
     <div id="brandProfileSlot" style="display:none; padding:14px 14px 0;"></div>
 
-    <div id="companyMarqueeSlot" class="company-marquee" style="display:none;">
-      <div class="company-marquee-track" id="companyMarqueeTrack"></div>
-    </div>
-
     <div id="adBannerSlot" class="ad-banner-slot" style="display:none;">
       <div class="ad-banner-title-bar" id="adBannerTitleBar"></div>
       <div class="ad-banner-viewport" id="adBannerViewport"></div>
       <div class="ad-banner-dots" id="adBannerDots"></div>
+    </div>
+
+    <div id="companyMarqueeSlot" class="company-marquee" style="display:none;">
+      <div class="company-marquee-track" id="companyMarqueeTrack"></div>
     </div>
 
     <div class="search-row" id="searchRow" style="display:none;">
@@ -878,7 +894,7 @@
 const STORE_PHONE = "962772812892";
 const STORE_PHONE_WAREHOUSE_2 = "962787244324";
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1526947385035591840/uwTG6K4Xd-ClAXKRksVP8-YcYTn_4PmZcULNFE9R4l-cIyu5cutarcAV9pE5uotFWsTE";
-const MIN_ORDER_TOTAL = 100; // الحد الأدنى للطلب بالدينار الأردني
+const MIN_ORDER_TOTAL = 50; // الحد الأدنى للطلب بالدينار الأردني
 /* ============================================================ */
 
 // بيانات تواصل كل شركة (لتحويل جزء الطلب الخاص فيها تلقائياً)
@@ -2926,9 +2942,19 @@ function renderApp(){
       document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
-      companyMarqueeSlot.style.display = 'none';
-      document.getElementById('adBannerSlot').style.display = 'block';
-      renderAdBanner();
+      if (window._companiesDataReady){
+        companyMarqueeSlot.style.display = 'block';
+        renderCompanyMarquee();
+      } else {
+        companyMarqueeSlot.style.display = 'none';
+      }
+      if (window._wholesaleFeaturedReady){
+        document.getElementById('adBannerSlot').style.display = 'block';
+        renderAdBanner();
+      } else {
+        // لسا ما وصلت بيانات اللوحة الحقيقية من قاعدة البيانات، فمنخليها مخفية بدل ما نوري لوحة فاضية/افتراضية لحظياً
+        document.getElementById('adBannerSlot').style.display = 'none';
+      }
     } else if (viewLevel === 'items' && !!searchQuery) {
       // أثناء أي بحث (سواء جوا شركة معينة أو بشكل عام)، منخفي شريط الترحيب وشريط الموقع لأنهم مش مكانهم بشاشة نتائج بحث
       heroSection.style.display = 'none';
@@ -3224,6 +3250,32 @@ async function loadMyOrders(){
 }
 let _logoTapCount = 0;
 let _logoTapTimer = null;
+// ===== القائمة الجانبية (☰) =====
+function openSideMenu(){
+  document.getElementById('sideMenuOverlay').style.display = 'block';
+  const wa = document.getElementById('sideMenuWhatsapp');
+  if (wa) wa.href = `https://wa.me/${STORE_PHONE}?text=${encodeURIComponent('مرحباً، حابب أستفسر عن الأصيل للتوزيعات الغذائية والجملة')}`;
+  requestAnimationFrame(() => {
+    document.getElementById('sideMenuDrawer').style.transform = 'translateX(0)';
+  });
+}
+function closeSideMenu(){
+  const drawer = document.getElementById('sideMenuDrawer');
+  drawer.style.transform = 'translateX(100%)';
+  setTimeout(() => { document.getElementById('sideMenuOverlay').style.display = 'none'; }, 280);
+}
+// رجوع لقائمة الشركات (الشاشة الرئيسية بوضع الجملة) بدون ما نفضي السلة أو نطلع من الوضع
+function goHomeFromSideMenu(){
+  if (appMode === 'store' && wholesaleUnlocked){
+    viewLevel = 'categories'; activeCat = null; searchQuery = ''; activeOfferId = null;
+    document.getElementById('searchInput').value = '';
+    pushNavState(); renderApp();
+  }
+}
+function showAboutAppModal(){
+  alert('الأصيل للتوزيعات الغذائية والجملة 💛\n\nمنصة توصل شركات المواد الغذائية بالتجار مباشرة، بأسعار جملة وتوصيل موثوق.\n\nللتواصل: تواصلوا معنا من نفس القائمة 👋');
+}
+
 function handleLogoClick(){
   _logoTapCount++;
   if (_logoTapTimer) clearTimeout(_logoTapTimer);
@@ -5720,6 +5772,7 @@ async function addAdminSubBrand(){
 
 // ===== شركات ديناميكية يضيفها الأدمن بوضع الجملة =====
 window.DYNAMIC_COMPANIES = {};
+window._companiesDataReady = false;
 db.collection('companies').onSnapshot(snapshot => {
   snapshot.docChanges().forEach(change => {
     if (change.type === 'removed'){
@@ -5728,6 +5781,7 @@ db.collection('companies').onSnapshot(snapshot => {
       window.DYNAMIC_COMPANIES[change.doc.id] = change.doc.data();
     }
   });
+  window._companiesDataReady = true;
   if (typeof renderApp === 'function') renderApp();
 });
 
@@ -5790,6 +5844,7 @@ const DEFAULT_AD_BANNERS = [
 ];
 let AD_BANNERS = DEFAULT_AD_BANNERS;
 window.DYNAMIC_WHOLESALE_FEATURED = [];
+window._wholesaleFeaturedReady = false;
 db.collection('wholesaleFeaturedCompanies').orderBy('order', 'asc').onSnapshot(snap => {
   window.DYNAMIC_WHOLESALE_FEATURED = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   const builtSlides = window.DYNAMIC_WHOLESALE_FEATURED.map(f => {
@@ -5810,8 +5865,11 @@ db.collection('wholesaleFeaturedCompanies').orderBy('order', 'asc').onSnapshot(s
     };
   });
   AD_BANNERS = builtSlides.length ? builtSlides : DEFAULT_AD_BANNERS;
+  window._wholesaleFeaturedReady = true;
   if (document.getElementById('adBannerViewport')) renderAdBanner();
   if (typeof renderWholesaleFeaturedListBox === 'function' && document.getElementById('wholesaleFeaturedListBox')) renderWholesaleFeaturedListBox();
+  // أول ما توصل بيانات اللوحة الحقيقية، منعيد رسم الشاشة عشان توري اللوحة صح من أول لحظة بدون "قفزة" مرئية
+  if (typeof renderApp === 'function') renderApp();
 });
 let _adBannerIndex = 0;
 let _adBannerTimer = null;
@@ -5991,6 +6049,12 @@ function renderCompanyMarquee(){
 
 function renderCategoriesView(){
   const target = document.getElementById('viewCategories');
+
+  if (wholesaleUnlocked && !window._companiesDataReady){
+    // لسا ما وصلت بيانات الشركات الحقيقية من قاعدة البيانات — منوري تحميل بسيط بدل شبكة ناقصة هتتغيّر بعد ثانية
+    target.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px 10px; color:var(--gray); font-size:13px;">⏳ جاري تحميل الشركات...</div>`;
+    return;
+  }
 
   if (wholesaleUnlocked){
     // وضع الجملة: كل ماركة قسم لحالها
