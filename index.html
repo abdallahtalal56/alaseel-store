@@ -2948,12 +2948,8 @@ function renderApp(){
       document.getElementById('retailAdBannerSlot').style.display = 'none';
       brandProfileSlot.style.display = 'none';
       brandProfileSlot.innerHTML = '';
-      if (window._companiesDataReady){
-        companyMarqueeSlot.style.display = 'block';
-        renderCompanyMarquee();
-      } else {
-        companyMarqueeSlot.style.display = 'none';
-      }
+      // الشريط الدائري المتحرك ملغي مؤقتاً (كان سبب تعليق بالتنقل)
+      companyMarqueeSlot.style.display = 'none';
       if (window._wholesaleFeaturedReady){
         document.getElementById('adBannerSlot').style.display = 'block';
         renderAdBanner();
