@@ -220,7 +220,7 @@
   }
   .cat-box:active{ transform:scale(0.96); background:#FDFCF7;}
   .cat-box-icon{
-    width:44px; height:44px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:8px; border:1px solid rgba(201,162,39,0.15); overflow:hidden;
+    width:44px; height:44px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:8px; border:1px solid rgba(201,162,39,0.15); overflow:hidden; animation: subbrandFloat 3s ease-in-out infinite;
   }
   .cat-box-name{ font-size:11px; font-weight:800; color:var(--ink); line-height:1.3; min-height:30px; display:flex; align-items:center; justify-content:center;}
   .verified-badge{ display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; min-width:14px; border-radius:50%; background:#1DA1F2; color:#fff; font-size:9px; margin-inline-start:3px; line-height:1; }
@@ -248,8 +248,7 @@
   .subbrand-aseel-tag{ font-size:8.5px; font-weight:800; color:var(--gold-light); background:var(--ink); padding:1px 7px; border-radius:8px; letter-spacing:.3px; margin-top:-2px; }
   .company-marquee{ overflow:hidden; padding:14px 0 10px; }
   .company-marquee-track{ display:flex; gap:16px; width:max-content; animation: companyMarqueeScroll 18s linear infinite; }
-  .company-marquee:hover .company-marquee-track{ animation-play-state: paused; }
-  .company-marquee-chip{ flex:0 0 auto; width:92px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; }
+  .company-marquee-chip{ flex:0 0 auto; width:92px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; animation: marqueeChipPop 3.6s ease-in-out infinite; }
   .company-marquee-ring{ width:64px; height:64px; border-radius:50%; padding:3px; background:linear-gradient(135deg, var(--gold-light), var(--gold)); animation: subbrandFloat 3s ease-in-out infinite; }
   .company-marquee-ring img{ width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--cream); }
   .company-marquee-name{ font-size:10.5px; font-weight:800; color:var(--ink); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:92px; }
@@ -288,6 +287,13 @@
   @keyframes subbrandFloat{
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-4px) scale(1.04); }
+  }
+  @keyframes marqueeChipPop{
+    0%, 100% { transform: scale(1); }
+    45% { transform: scale(1); }
+    55% { transform: scale(1.14); }
+    65% { transform: scale(0.97); }
+    75% { transform: scale(1); }
   }
   .subbrand-row:nth-child(2n) .subbrand-row-ring{ animation-delay: .5s; }
   .subbrand-row:nth-child(3n) .subbrand-row-ring{ animation-delay: 1s; }
@@ -2954,6 +2960,14 @@ function renderApp(){
       } else {
         // لسا ما وصلت بيانات اللوحة الحقيقية من قاعدة البيانات، فمنخليها مخفية بدل ما نوري لوحة فاضية/افتراضية لحظياً
         document.getElementById('adBannerSlot').style.display = 'none';
+        if (!window._wholesaleFeaturedFallbackTimer){
+          window._wholesaleFeaturedFallbackTimer = setTimeout(() => {
+            if (!window._wholesaleFeaturedReady){
+              window._wholesaleFeaturedReady = true;
+              if (typeof renderApp === 'function') renderApp();
+            }
+          }, 4000);
+        }
       }
     } else if (viewLevel === 'items' && !!searchQuery) {
       // أثناء أي بحث (سواء جوا شركة معينة أو بشكل عام)، منخفي شريط الترحيب وشريط الموقع لأنهم مش مكانهم بشاشة نتائج بحث
@@ -6021,30 +6035,32 @@ function renderCompanyMarquee(){
   const track = document.getElementById('companyMarqueeTrack');
   const brandCats = getWholesaleBrandCats();
   if (!brandCats.length){ track.innerHTML = ''; return; }
-  const chipHtml = (key, image, name, count) => `
-    <div class="company-marquee-chip" onclick="navigateToCategory('${key}')">
+  const chipHtml = (key, image, name, count, idx) => `
+    <div class="company-marquee-chip" style="animation-delay:${(idx % 8) * 0.35}s" onclick="navigateToCategory('${key}')">
       <div class="company-marquee-ring"><img src="${image || ''}"></div>
       <div class="company-marquee-name">${name}</div>
       <div class="company-marquee-count">${count} صنف</div>
     </div>`;
-  // الشريط المتحرك يعرض الأقسام الفرعية بس (بدون الشركات الرئيسية نفسها)
+  // الشريط المتحرك يعرض كل الشركات (مش بس اللي إلها أقسام فرعية)، بالإضافة لأي قسم فرعي داخلها، عشان يضل غني وما يوصل لفراغ
   let allChips = [];
   brandCats.forEach(info => {
     const companyRawName = info.key.slice(7); // إزالة بادئة "brand::"
+    allChips.push({ key: info.key, image: info.image, name: info.name, count: info.count });
     const subs = getSubBrandsForCompany(companyRawName);
     if (subs.length) {
       subs.forEach(sb => {
         const cnt = PRODUCTS_DATA.filter(p => getBrand(p.name) === companyRawName && getSubBrand(companyRawName, p) === sb.key).length;
-        allChips.push(chipHtml(`brand::${companyRawName}::${sb.key}`, sb.logo, sb.name, cnt));
+        allChips.push({ key: `brand::${companyRawName}::${sb.key}`, image: sb.logo, name: sb.name, count: cnt });
       });
     }
   });
   if (!allChips.length){ track.innerHTML = ''; return; }
-  // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop)
-  track.innerHTML = allChips.join('') + allChips.join('');
-  // نضبط مدة الحركة حسب عدد العناصر حتى تضل السرعة ثابتة ومريحة مهما زاد عدد الأقسام، وما توصل لمرحلة وقفة/فراغ
-  const speedPerChip = 2.4; // ثانية لكل عنصر تقريباً
-  track.style.animationDuration = Math.max(allChips.length * speedPerChip, 10) + 's';
+  const chipsHtml = allChips.map((c, idx) => chipHtml(c.key, c.image, c.name, c.count, idx)).join('');
+  // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop) بدون ما توصل لمرحلة فراغ أو وقفة
+  track.innerHTML = chipsHtml + chipsHtml;
+  // نضبط مدة الحركة حسب عدد العناصر حتى تضل السرعة ثابتة ومريحة مهما زاد عدد الأقسام
+  const speedPerChip = 1.6; // ثانية لكل عنصر تقريباً
+  track.style.animationDuration = Math.max(allChips.length * speedPerChip, 20) + 's';
 }
 
 function renderCategoriesView(){
@@ -6053,6 +6069,15 @@ function renderCategoriesView(){
   if (wholesaleUnlocked && !window._companiesDataReady){
     // لسا ما وصلت بيانات الشركات الحقيقية من قاعدة البيانات — منوري تحميل بسيط بدل شبكة ناقصة هتتغيّر بعد ثانية
     target.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px 10px; color:var(--gray); font-size:13px;">⏳ جاري تحميل الشركات...</div>`;
+    // شبكة أمان: لو لأي سبب البيانات تأخرت كتير (أو ما وصل إشعار التحديث)، منجبر الشاشة تعرض بعد 4 ثواني بدل ما تضل عالقة للأبد
+    if (!window._companiesReadyFallbackTimer){
+      window._companiesReadyFallbackTimer = setTimeout(() => {
+        if (!window._companiesDataReady){
+          window._companiesDataReady = true;
+          if (typeof renderApp === 'function') renderApp();
+        }
+      }, 4000);
+    }
     return;
   }
 
