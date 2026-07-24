@@ -220,7 +220,7 @@
   }
   .cat-box:active{ transform:scale(0.96); background:#FDFCF7;}
   .cat-box-icon{
-    width:44px; height:44px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:8px; border:1px solid rgba(201,162,39,0.15); overflow:hidden; animation: subbrandFloat 3s ease-in-out infinite;
+    width:44px; height:44px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:8px; border:1px solid rgba(201,162,39,0.15); overflow:hidden;
   }
   .cat-box-name{ font-size:11px; font-weight:800; color:var(--ink); line-height:1.3; min-height:30px; display:flex; align-items:center; justify-content:center;}
   .verified-badge{ display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; min-width:14px; border-radius:50%; background:#1DA1F2; color:#fff; font-size:9px; margin-inline-start:3px; line-height:1; }
@@ -275,7 +275,7 @@
   .retail-ad-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; }
   .retail-ad-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s; }
   .retail-ad-dot.active{ background:var(--gold); width:16px; border-radius:5px; }
-  @keyframes companyMarqueeScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  @keyframes companyMarqueeScroll{ from{ transform:translateX(-50%); } to{ transform:translateX(0); } }
   .company-intro{ grid-column:1/-1; background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px 16px; margin-bottom:14px; text-align:center; box-shadow:0 4px 12px rgba(16,25,58,0.06); }
   .company-intro-logo{ width:78px; height:78px; border-radius:50%; margin:0 auto 10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); overflow:hidden; }
   .company-intro-logo img{ width:100%; height:100%; object-fit:cover; }
@@ -6032,16 +6032,18 @@ function renderRetailFeaturedListBox(){
 }
 
 function renderCompanyMarquee(){
+  // منبني الشريط مرة وحدة بس بكل الجلسة، ومش بنلمسه تاني إطلاقاً — هيك حركته تضل مستمرة وما تنقطع أو "تختفي" مهما تحدثت بيانات تانية بالخلفية
+  if (window._marqueeBuiltOnce) return;
   const track = document.getElementById('companyMarqueeTrack');
   const brandCats = getWholesaleBrandCats();
-  if (!brandCats.length){ track.innerHTML = ''; window._marqueeSignature = ''; return; }
+  if (!brandCats.length) return; // ما وصلت بيانات كافية لسا، منجرب تاني بالمرة الجاية
   const chipHtml = (key, image, name, count, idx) => `
     <div class="company-marquee-chip" style="animation-delay:${(idx % 8) * 0.35}s" onclick="navigateToCategory('${key}')">
-      <div class="company-marquee-ring"><img src="${image || ''}"></div>
+      <div class="company-marquee-ring"><img src="${image || ''}" loading="lazy"></div>
       <div class="company-marquee-name">${name}</div>
       <div class="company-marquee-count">${count} صنف</div>
     </div>`;
-  // الشريط المتحرك يعرض كل الشركات (مش بس اللي إلها أقسام فرعية)، بالإضافة لأي قسم فرعي داخلها، عشان يضل غني وما يوصل لفراغ
+  // الشريط يعرض كل الشركات (مش بس اللي إلها أقسام فرعية)، بالإضافة لأي قسم فرعي داخلها، عشان يضل غني وما يوصل لفراغ
   let allChips = [];
   brandCats.forEach(info => {
     const companyRawName = info.key.slice(7); // إزالة بادئة "brand::"
@@ -6054,13 +6056,8 @@ function renderCompanyMarquee(){
       });
     }
   });
-  if (!allChips.length){ track.innerHTML = ''; window._marqueeSignature = ''; return; }
-  // بصمة بسيطة (أسماء + مفاتيح بس، بدون العدد) عشان نعرف هل المحتوى تغيّر فعلاً ولا لأ — تغيّر العدد بس ما يستاهل نعيد بناء الشريط ونوقف حركته
-  const signature = allChips.map(c => c.key).join('|');
-  if (signature === window._marqueeSignature){
-    return; // نفس الشركات بالظبط، ما في داعي نلمس الشريط ونقطع حركته المستمرة
-  }
-  window._marqueeSignature = signature;
+  if (!allChips.length) return;
+  window._marqueeBuiltOnce = true;
   const chipsHtml = allChips.map((c, idx) => chipHtml(c.key, c.image, c.name, c.count, idx)).join('');
   // نكرر القائمة مرتين لعمل تمرير لا نهائي سلس (loop) بدون ما توصل لمرحلة فراغ أو وقفة
   track.innerHTML = chipsHtml + chipsHtml;
@@ -6109,7 +6106,7 @@ function renderCategoriesView(){
       <div class="cat-box${isLocked ? ' locked' : ''}" style="position:relative;" onclick="navigateToCategory('${info.key}')">
         ${toggleBtnHtml}
         ${orderBtnsHtml}
-        <div class="cat-box-icon">${info.image ? `<img src="${info.image}" style="width:100%;height:100%;object-fit:cover;">` : info.emoji}</div>
+        <div class="cat-box-icon">${info.image ? `<img src="${info.image}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">` : info.emoji}</div>
         <div class="cat-box-name">${info.name}${info.verified ? `<span class="verified-badge" title="شركة موثقة">✔</span>` : ''}</div>
         ${isLocked ? `<div class="locked-badge">🔒 متوقف حالياً</div>` : `<div class="section-count" style="margin-top:4px;">${info.count} صنف</div>`}
         ${linkBtnHtml}
