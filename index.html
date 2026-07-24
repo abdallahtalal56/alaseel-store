@@ -3693,6 +3693,8 @@ function renderAdminProductList(){
       </select>
       <label style="display:block; color:#ffd27a; font-size:12px; margin-bottom:5px;">🎬 رابط فيديو يوتيوب (اختياري — بدل الصورة الثابتة)</label>
       <input id="adm_wh_ad_video" type="text" placeholder="الصقي رابط يوتيوب هون (اختياري)" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
+      <label style="display:block; color:#ccc; font-size:12px; margin-bottom:5px;">⏱️ مدة عرض الفيديو بالثواني (اختياري، افتراضي 15 ثانية)</label>
+      <input id="adm_wh_ad_video_duration" type="number" placeholder="مثال: 15" style="width:100%; padding:9px; border-radius:8px; border:1px solid #444; background:#2A5670; color:#fff; font-size:13px; margin-bottom:8px;">
       <button onclick="addWholesaleFeaturedCompany()" style="width:100%; padding:10px; border-radius:8px; border:none; background:var(--gold); color:#2A5670; font-weight:900; font-size:14px; margin-bottom:14px;">🤖 أضيفيها للوحة تلقائياً</button>
       <div style="color:#ccc; font-size:12px; margin-bottom:8px;">الشركات المعروضة حالياً باللوحة:</div>
       <div id="wholesaleFeaturedListBox"></div>
@@ -4736,6 +4738,7 @@ async function addWholesaleFeaturedCompany(){
   const company = select.value;
   const videoUrl = document.getElementById('adm_wh_ad_video').value.trim();
   const videoId = extractYoutubeId(videoUrl);
+  const videoDurationSec = parseInt(document.getElementById('adm_wh_ad_video_duration').value, 10) || 0;
   if (!company){ alert('لازم تختاري شركة'); return; }
   if (videoUrl && !videoId){ alert('رابط اليوتيوب مش واضح، تأكدي إنه رابط فيديو صحيح'); return; }
   if ((window.DYNAMIC_WHOLESALE_FEATURED || []).some(f => f.companyName === company)){
@@ -4745,11 +4748,13 @@ async function addWholesaleFeaturedCompany(){
     await db.collection('wholesaleFeaturedCompanies').add({
       companyName: company,
       videoId: videoId || '',
+      videoDurationSec: videoId ? (videoDurationSec || 15) : 0,
       order: Date.now(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     select.value = '';
     document.getElementById('adm_wh_ad_video').value = '';
+    document.getElementById('adm_wh_ad_video_duration').value = '';
   } catch(e){ alert('صار خطأ: ' + e.message); }
 }
 async function removeWholesaleFeaturedCompany(docId){
@@ -5803,6 +5808,7 @@ db.collection('wholesaleFeaturedCompanies').orderBy('order', 'asc').onSnapshot(s
       sub,
       image: co.introImage || co.logo || '',
       videoId: f.videoId || '',
+      videoDurationSec: f.videoDurationSec || 0,
       link: `${location.origin}${location.pathname}#${encodeURIComponent('brand::' + f.companyName)}`
     };
   });
@@ -5854,16 +5860,27 @@ function renderAdBanner(){
   `).join('');
 
   _adBannerIndex = 0;
-  if (_adBannerTimer) clearInterval(_adBannerTimer);
-  _adBannerTimer = setInterval(() => {
+  scheduleNextAdBannerSlide();
+}
+// مدة عرض كل شريحة: الفيديو يضل وقت أطول بكثير من الصورة العادية عشان يعطي فرصة يتفرجوا عليه كامل
+function getAdBannerSlideDuration(i){
+  const ad = AD_BANNERS[i];
+  return (ad && ad.videoId) ? (ad.videoDurationSec ? ad.videoDurationSec * 1000 : 15000) : 4000;
+}
+function scheduleNextAdBannerSlide(){
+  if (_adBannerTimer) clearTimeout(_adBannerTimer);
+  if (!AD_BANNERS.length) return;
+  const duration = getAdBannerSlideDuration(_adBannerIndex);
+  _adBannerTimer = setTimeout(() => {
     goToAdBanner((_adBannerIndex + 1) % AD_BANNERS.length);
-  }, 4000);
+  }, duration);
 }
 
 function goToAdBanner(i){
   _adBannerIndex = i;
   document.querySelectorAll('.ad-banner-slide').forEach(el => el.classList.toggle('active', Number(el.dataset.idx) === i));
   document.querySelectorAll('.ad-banner-dot').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  scheduleNextAdBannerSlide();
 }
 
 // اللوحة الذكية بقسم المفرق: بتبني نفسها تلقائياً من بيانات العرض المختار (صورة/اسم/سعر) بدون أي إدخال يدوي إضافي
