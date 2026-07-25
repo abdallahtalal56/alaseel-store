@@ -6109,7 +6109,7 @@ function renderAdBanner(){
     const mediaHtml = ad.gifUrl
       ? `<img src="${ad.gifUrl}">`
       : (ad.videoFileUrl
-        ? `<video class="ad-video-frame" src="${ad.videoFileUrl}" autoplay muted loop playsinline webkit-playsinline="true" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none;"></video>`
+        ? `<video class="ad-video-frame" src="${ad.videoFileUrl}" autoplay muted loop playsinline webkit-playsinline="true" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none;"></video>`
         : (ad.videoId
           ? `<iframe class="ad-video-frame" data-video-id="${ad.videoId}" src="https://www.youtube.com/embed/${ad.videoId}?autoplay=1&mute=1&loop=1&playlist=${ad.videoId}&controls=0&modestbranding=1&playsinline=1&rel=0&disablekb=1&iv_load_policy=3&fs=0&showinfo=0&enablejsapi=1" webkit-playsinline="true" style="position:absolute; inset:0; width:100%; height:100%; border:none; pointer-events:none;" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`
           : (ad.image ? `<img src="${ad.image}">` : '')));
