@@ -1994,6 +1994,8 @@ const COMPANY_DISPLAY_NAMES = {
   "بيبي ماجيك": "بيبي ماجيك Baby Magic",
   "لانشون يونيوم": "لانشون يونيوم Younium Luncheon"
 };
+// اسم شركة "مستودع الأصيل" — أقسامه الداخلية هي اللي صارت تظهر مباشرة كشاشة رئيسية بدل قائمة الشركات
+const ASEEL_WAREHOUSE_NAME = "مستودع الأصيل ( ١ )";
 function getWholesaleBrandCats(){
   const counts = {};
   const sampleImg = {};
@@ -3143,6 +3145,15 @@ function handleBackButton(){
   if(viewLevel === 'items'){
     const isBrandCat = typeof activeCat === 'string' && activeCat.startsWith('brand::');
     const brandParts = isBrandCat ? activeCat.slice(7).split('::') : [];
+    if (isBrandCat && brandParts[0] === ASEEL_WAREHOUSE_NAME && brandParts[1] && !searchQuery){
+      // أقسام مستودع الأصيل صارت هي الشاشة الرئيسية نفسها، فبالرجوع منها نطلع للشاشة الرئيسية على طول
+      viewLevel = 'categories';
+      searchQuery = '';
+      document.getElementById('searchInput').value = '';
+      pushNavState();
+      renderApp();
+      return;
+    }
     if (isBrandCat && brandParts[1] && !searchQuery){
       // من قسم فرعي (متل Coffee Break) نرجع لقسم الشركة الأم
       activeCat = 'brand::' + brandParts[0];
@@ -6301,30 +6312,26 @@ function renderCategoriesView(){
   }
 
   if (wholesaleUnlocked){
-    // وضع الجملة: كل ماركة قسم لحالها
-    const brandCats = getWholesaleBrandCats();
-    target.innerHTML = brandCats.map(info => {
-      const brandRawName = info.key.slice(7);
-      const isLocked = !isSectionOpen(brandRawName);
-      const toggleBtnHtml = (adminEditMode && !companyAdminScope)
-        ? `<button onclick="event.stopPropagation(); toggleSectionOpen('${brandRawName.replace(/'/g,"\\'")}')" style="position:absolute; top:6px; left:6px; z-index:5; background:${isLocked ? '#5B95B8' : '#b33'}; color:#fff; border:none; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800;">${isLocked ? '🔓 فتح' : '🔒 قفل'}</button>`
-        : '';
+    // وضع الجملة: بدل قائمة الشركات، الشاشة الرئيسية بتعرض مباشرة أقسام "مستودع الأصيل" الداخلية
+    const aseelSections = getSubBrandsForCompany(ASEEL_WAREHOUSE_NAME);
+    target.innerHTML = aseelSections.map(sb => {
+      const sectionKey = `brand::${ASEEL_WAREHOUSE_NAME}::${sb.key}`;
+      const cnt = PRODUCTS_DATA.filter(p => getBrand(p.name) === ASEEL_WAREHOUSE_NAME && getSubBrand(ASEEL_WAREHOUSE_NAME, p) === sb.key).length;
       const orderBtnsHtml = (adminEditMode && !companyAdminScope)
         ? `<div style="position:absolute; top:6px; right:6px; z-index:5; display:flex; flex-direction:column; gap:3px;">
-             <button onclick="event.stopPropagation(); moveCompanyOrder('${brandRawName.replace(/'/g,"\\'")}', -1)" style="background:#333; color:#fff; border:none; border-radius:6px; width:24px; height:22px; font-size:12px;">↑</button>
-             <button onclick="event.stopPropagation(); moveCompanyOrder('${brandRawName.replace(/'/g,"\\'")}', 1)" style="background:#333; color:#fff; border:none; border-radius:6px; width:24px; height:22px; font-size:12px;">↓</button>
+             <button onclick="event.stopPropagation(); moveSubBrandOrder('${ASEEL_WAREHOUSE_NAME.replace(/'/g,"\\'")}', '${sb.key.replace(/'/g,"\\'")}', -1)" style="background:#333; color:#fff; border:none; border-radius:6px; width:24px; height:22px; font-size:12px;">↑</button>
+             <button onclick="event.stopPropagation(); moveSubBrandOrder('${ASEEL_WAREHOUSE_NAME.replace(/'/g,"\\'")}', '${sb.key.replace(/'/g,"\\'")}', 1)" style="background:#333; color:#fff; border:none; border-radius:6px; width:24px; height:22px; font-size:12px;">↓</button>
            </div>`
         : '';
       const linkBtnHtml = (adminEditMode && !companyAdminScope)
-        ? `<button onclick="event.stopPropagation(); copyCompanyDeepLink('${info.key.replace(/'/g,"\\'")}')" style="margin-top:6px; width:100%; background:#1DA1F2; color:#fff; border:none; border-radius:8px; padding:5px 6px; font-size:10px; font-weight:800;">🔗 نسخ رابط الشركة</button>`
+        ? `<button onclick="event.stopPropagation(); copyCompanyDeepLink('${sectionKey.replace(/'/g,"\\'")}')" style="margin-top:6px; width:100%; background:#1DA1F2; color:#fff; border:none; border-radius:8px; padding:5px 6px; font-size:10px; font-weight:800;">🔗 نسخ رابط القسم</button>`
         : '';
       return `
-      <div class="cat-box${isLocked ? ' locked' : ''}" style="position:relative;" onclick="navigateToCategory('${info.key}')">
-        ${toggleBtnHtml}
+      <div class="cat-box" style="position:relative;" onclick="navigateToCategory('${sectionKey}')">
         ${orderBtnsHtml}
-        <div class="cat-box-icon">${info.image ? `<img src="${info.image}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">` : info.emoji}</div>
-        <div class="cat-box-name">${info.name}${info.verified ? `<span class="verified-badge" title="شركة موثقة">✔</span>` : ''}</div>
-        ${isLocked ? `<div class="locked-badge">🔒 متوقف حالياً</div>` : `<div class="section-count" style="margin-top:4px;">${info.count} صنف</div>`}
+        <div class="cat-box-icon">${sb.logo ? `<img src="${sb.logo}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">` : '🏷️'}</div>
+        <div class="cat-box-name">${sb.name}</div>
+        <div class="section-count" style="margin-top:4px;">${cnt} صنف</div>
         ${linkBtnHtml}
       </div>
     `;
@@ -8147,7 +8154,8 @@ function handleInitialDeepLink(){
   try { key = decodeURIComponent(raw); } catch(e){ key = raw; }
   if (!key.startsWith('brand::')) return;
   const brandName = key.slice(7).split('::')[0];
-  const validKeys = getWholesaleBrandCats().map(c => c.key);
+  const validKeys = getWholesaleBrandCats().map(c => c.key)
+    .concat(getSubBrandsForCompany(ASEEL_WAREHOUSE_NAME).map(sb => `brand::${ASEEL_WAREHOUSE_NAME}::${sb.key}`));
   if (!validKeys.includes(key)) return; // رابط غير معروف، منتجاهله بهدوء ونخلي التطبيق يفتح عادي
   if (!isSectionOpen(brandName)) return; // القسم مقفول حالياً، منتجاهل الرابط
   appMode = 'store'; wholesaleUnlocked = true; viewLevel = 'items'; activeCat = key; searchQuery = ''; activeSub = 'all';
